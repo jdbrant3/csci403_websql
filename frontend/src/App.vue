@@ -1,13 +1,51 @@
 <template>
-  <div id="app">
-    <img src="./assets/logo.png">
-    <router-view/>
-  </div>
+  <v-app>
+    <v-app-bar
+      app
+      color="primary"
+      dark
+    >
+      <div class="d-flex align-center">
+        <v-img
+          alt="Vuetify Logo"
+          class="shrink mr-2"
+          contain
+          src="https://cdn.vuetifyjs.com/images/logos/vuetify-logo-dark.png"
+          transition="scale-transition"
+          width="40"
+        />
+        <span>
+          Web SQL Interface
+        </span>
+      </div>
+
+      <v-spacer></v-spacer>
+
+      <v-btn
+        href=""
+        text
+      >
+        <span class="mr-2">Logout</span>
+      </v-btn>
+    </v-app-bar>
+
+    <v-main>
+      <WebSQL/>
+    </v-main>
+  </v-app>
 </template>
 
 <script>
+import WebSQL from './components/WebSQL.vue'
 export default {
-  name: 'app'
+  name: 'app',
+
+  components: {
+    WebSQL
+  },
+  data: () => ({
+    //
+  })
 }
 </script>
 

@@ -1,2 +1,4 @@
 build/*.js
 config/*.js
+src/components/WebSQL.vue
+*.js
