@@ -13,7 +13,7 @@
         >
         </v-textarea>
         <v-btn
-                @click="execute_sql"
+                @click="execute_sql_backend"
                 color="green"
                 :disabled="!query"
                 rounded
@@ -58,17 +58,17 @@
         </v-card>
       </v-col>
     </v-row>
-
   </v-container>
 </template>
 
 
 <script>
-  export default {
+import axios from 'axios'
+export default {
     name: 'WebSQL',
 
     data: () => ({
-      query: "",
+      query: '',
       results: [],
       somedata: {
         columns: ["item", "quantity", "cost"],
@@ -108,6 +108,7 @@
           headers: d.columns.map(
                   e => ({ text: e, value: e })
           ),
+
           rows: d.data.map(
                   row => row.reduce(
                           (obj, e, idx) => {
@@ -118,6 +119,21 @@
                   )
           )
         });
+        this.tab = this.results.length - 1
+      },
+      execute_sql_backend: async function () {
+        const path = `http://localhost:5000/api/query`
+        axios.get(path)
+        .then(response => {
+            this.results.push({
+                query: this.query,
+                headers: null,
+                rows: response.data.data
+            })
+        })
+        .catch(error => {
+            console.log(error)
+        })
         this.tab = this.results.length - 1
       }
     }
