@@ -1,7 +1,8 @@
-from flask import Flask, render_template, jsonify
+from flask import Flask, render_template, jsonify, session
 from random import *
 from flask_cors import CORS
 import requests
+from flask import request
 import psycopg2 as pg 
 import pandas as pd 
 import pandas.io.sql as psql 
@@ -14,7 +15,7 @@ app = Flask(__name__,
 cors = CORS(app, resources={r"/api/*": {"origins": "*"}})
 
 
-@app.route('/api/query')
+@app.route('/api/query', methods=['POST'])
 def execute_query():
     try:
         connection = pg.connect(user = "jdbrant",
@@ -24,29 +25,25 @@ def execute_query():
                                     database = "coursedev")
 
         cursor = connection.cursor()
-        # Print PostgreSQL Connection properties
-        # print ( connection.get_dsn_parameters(),"\n")
-
-        # Print PostgreSQL version
-        # cursor.execute("SELECT version();")
-        # record = cursor.fetchone()
-        # print("You are connected to - ", record,"\n")
     
-
         try:
-            # query = "SELECT concat(first,' ', last) as name, school, known_for as description FROM pioneers.pioneers_people WHERE school = 'Stanford University';"
-            # print("Enter SQL query:", end=' ')
-            # query = input()
-            query = "SELECT last, first FROM pioneers.pioneers_people;"
+            query = request.json['query']
+            # print(query)
+            # app.logger(query)
+            # print(args, file=sys.stderr)
+            # query = "SELECT last, first FROM pioneers.pioneers_people;"
             table = pd.read_sql(query, connection)
-            # df = pd.DataFrame(table)
-            # print(tabulate(df, headers = df.columns, tablefmt = 'psql'))
-            return table.to_json(orient='records')
+            response = table.to_json(orient='records')
+            # response.headers.add('Access-Control-Allow-Origin', '*')
+            return response
         except:
             print("Cannot fetch Query:", query)
+            return None
 
     except (Exception, pg.Error) as error :
         print ("Error while connecting to PostgreSQL", error)
+        app.logger.exception(error)
+        return None
     finally:
         #closing database connection.
             if(connection):
@@ -54,6 +51,7 @@ def execute_query():
                 connection.close()
                 # print("PostgreSQL connection is closed")
 
+# These are leftovers from previous build
 @app.route('/api/random')
 def random_number():
     response = {

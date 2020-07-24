@@ -13,7 +13,7 @@
         >
         </v-textarea>
         <v-btn
-                @click="execute_sql"
+                @click="execute_sql_backend"
                 color="green"
                 :disabled="!query"
                 rounded
@@ -70,44 +70,26 @@ export default {
     data: () => ({
       query: '',
       results: [],
-      somedata: {
-        columns: ["a", "b", "c", "d", "e", "f", "g"],
-        data: (Array(100).fill([]).map(
-                () => Array(7).fill(Math.random() * 1000)
-        ))
-      },
       tab: null
     }),
 
     methods: {
-      execute_sql: async function() {
-        let d = this.somedata;
-        this.results.push({
-           query: this.query,
-          headers: d.columns.map(
-                  e => ({ text: e, value: e })
-          ),
-
-          rows: d.data.map(
-                  row => row.reduce(
-                          (obj, e, idx) => {
-                            obj[d.columns[idx]] = e;
-                            return obj;
-                          },
-                          {}
-                  )
-          )
-        });
-        this.tab = this.results.length - 1
-      },
       execute_sql_backend: async function () {
         const path = `http://localhost:5000/api/query`
-        axios.get(path)
+        axios.post(path, {query: this.query})
         .then(response => {
+            console.log(response.data);
+            let headers = null;
+            let rows = response.data;
+            if (rows) {
+              headers = Object.keys(rows[0]).map(
+                e => ({ text: e, value: e})
+              );
+            }
             this.results.push({
                 query: this.query,
-                headers: null,
-                rows: response.data.table
+                headers: headers,
+                rows: rows
             })
         })
         .catch(error => {
