@@ -13,7 +13,7 @@
         >
         </v-textarea>
         <v-btn
-                @click="execute_sql_backend"
+                @click="execute_sql"
                 color="green"
                 :disabled="!query"
                 rounded
@@ -71,26 +71,6 @@ export default {
       query: '',
       results: [],
       somedata: {
-        columns: ["item", "quantity", "cost"],
-        data: [
-          ["apple", 4, 7.50],
-          ["orange", 1, 2.00],
-          ["cherry", 50, 10.99],
-          ["quince", 6, 7.49],
-          ["pear", 1, 0.5],
-          ["pineapple", 1, 1.10],
-          ["peach", 0, null],
-          ["melon", 1, 2.99],
-          ["grape", 100, 3.49],
-          ["papaya", 2, 4.00],
-          ["guava", 3, 11.99],
-          ["nectarine", 8, 6.39],
-          ["plum", 8, 5.79],
-          ["strawberry", 25, 4.49],
-          ["lemon", 1, 0.33],
-        ]
-      },
-      somedata2: {
         columns: ["a", "b", "c", "d", "e", "f", "g"],
         data: (Array(100).fill([]).map(
                 () => Array(7).fill(Math.random() * 1000)
@@ -102,7 +82,6 @@ export default {
     methods: {
       execute_sql: async function() {
         let d = this.somedata;
-        if (Math.random() > 0.5) d = this.somedata2;
         this.results.push({
            query: this.query,
           headers: d.columns.map(
@@ -128,7 +107,7 @@ export default {
             this.results.push({
                 query: this.query,
                 headers: null,
-                rows: response.data.data
+                rows: response.data.table
             })
         })
         .catch(error => {
