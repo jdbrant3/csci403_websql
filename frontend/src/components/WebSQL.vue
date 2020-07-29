@@ -51,6 +51,7 @@
                       disable-filtering
                       disable-sort
                       height="250px"
+                      loading loading-text="Loading... Please wait"
               >
               </v-data-table>
             </v-tab-item>

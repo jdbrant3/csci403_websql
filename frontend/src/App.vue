@@ -18,19 +18,24 @@
           Web SQL Interface
         </span>
       </div>
-
       <v-spacer></v-spacer>
 
       <v-btn
         href=""
         text
+        @click="$router.push('login')"
       >
         <span class="mr-2">Logout</span>
       </v-btn>
     </v-app-bar>
 
     <v-main>
-      <WebSQL/>
+    <!-- <div id="nav">
+      <router-link to="/">Home</router-link> |
+      <router-link to="/login">Login</router-link> |
+      <router-link to="/websql">WebSQL</router-link>
+    </div> -->
+    <router-view/>
     </v-main>
   </v-app>
 </template>

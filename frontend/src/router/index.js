@@ -1,8 +1,9 @@
 import Vue from 'vue'
 import Router from 'vue-router'
 const routerOptions = [
-  { path: '/', component: 'Home' },
+  { path: '/', component: 'Login' },
   { path: '/home', component: 'Home' },
+  { path: '/login', component: 'Login' },
   { path: '/websql', component: 'WebSQL' },
   { path: '*', component: 'NotFound' }
 ]
