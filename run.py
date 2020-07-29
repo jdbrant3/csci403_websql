@@ -8,6 +8,7 @@ import pandas as pd
 import pandas.io.sql as psql 
 from tabulate import tabulate
 from psycopg2 import Error
+import json
 
 app = Flask(__name__,
             static_folder = "./dist/static",
@@ -18,20 +19,20 @@ cors = CORS(app, resources={r"/api/*": {"origins": "*"}})
 @app.route('/api/query', methods=['POST'])
 def execute_query():
     try:
-        connection = pg.connect(user = "jdbrant",
-                                    password = "jimmy123",
-                                    host = "flowers.mines.edu",
-                                    port = "5433",
-                                    database = "coursedev")
+        with open('db_conn_config.json') as config_file:
+            conn_config = json.load(config_file)
+
+        connection = pg.connect(user = conn_config['user'],
+                                password = conn_config['password'],
+                                host = conn_config['host'],
+                                port = conn_config['port'],
+                                database = conn_config['dbname'])
 
         cursor = connection.cursor()
     
         try:
             query = request.json['query']
-            # print(query)
-            # app.logger(query)
-            # print(args, file=sys.stderr)
-            # query = "SELECT last, first FROM pioneers.pioneers_people;"
+            # cursor.execute('SET search_path pioneers')
             table = pd.read_sql(query, connection)
             response = table.to_json(orient='records')
             # response.headers.add('Access-Control-Allow-Origin', '*')
