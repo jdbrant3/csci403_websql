@@ -65,38 +65,61 @@
 <script>
 import axios from 'axios'
 export default {
-    name: 'WebSQL',
+  name: 'WebSQL',
 
-    data: () => ({
-      query: '',
-      results: [],
-      tab: null
-    }),
+  data: () => ({
+    query: '',
+    results: [],
+    tab: null
+  }),
 
-    methods: {
-      execute_sql_backend: async function () {
-        const path = `http://localhost:5000/api/query`
-        axios.post(path, {query: this.query})
-        .then(response => {
-            console.log(response.data);
-            let headers = null;
-            let rows = response.data;
-            if (rows) {
-              headers = Object.keys(rows[0]).map(
-                e => ({ text: e, value: e})
-              );
-            }
-            this.results.push({
-                query: this.query,
-                headers: headers,
-                rows: rows
-            })
-        })
-        .catch(error => {
-            console.log(error)
-        })
-        this.tab = this.results.length - 1
+  mounted() {
+    if (sessionStorage.getItem('query')) {
+      this.query = sessionStorage.getItem('query');
+    }
+    if (sessionStorage.getItem('results')) {
+      try {
+        this.results = JSON.parse(sessionStorage.getItem('results'));
+      }
+      catch(e) {
+        sessionStorage.removeItem('results');
       }
     }
+    if (sessionStorage.getItem('tab')) {
+      this.tab = parseInt(sessionStorage.getItem('tab'));
+    }
+  },
+
+  methods: {
+    execute_sql_backend: async function () {
+      const path = `http://localhost:5000/api/query`;
+
+      // save the query regardless of success
+      sessionStorage.setItem('query', this.query);
+
+      axios.post(path, {query: this.query})
+      .then(response => {
+        console.log(response.data);
+        let headers = null;
+        let rows = response.data;
+        if (rows) {
+          headers = Object.keys(rows[0]).map(
+            e => ({ text: e, value: e})
+          );
+        }
+        this.results.push({
+          query: this.query,
+          headers: headers,
+          rows: rows
+        });
+        this.tab = this.results.length - 1;
+        sessionStorage.setItem('results', JSON.stringify(this.results));
+        sessionStorage.setItem('tab', this.tab);
+      })
+      .catch(error => {
+        console.log(error)
+      })
+    }
   }
+}
 </script>

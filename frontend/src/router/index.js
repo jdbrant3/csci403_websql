@@ -1,9 +1,8 @@
 import Vue from 'vue'
 import Router from 'vue-router'
 const routerOptions = [
-  { path: '/', component: 'Home' },
-  { path: '/home', component: 'Home' },
-  { path: '/websql', component: 'WebSQL' },
+  { path: '/', component: 'WebSQL' },
+  { path: '/settings', component: 'Settings' },
   { path: '*', component: 'NotFound' }
 ]
 const routes = routerOptions.map(route => {
@@ -12,8 +11,10 @@ const routes = routerOptions.map(route => {
     component: () => import(`@/components/${route.component}.vue`)
   }
 })
-Vue.use(Router)
+
 export default new Router({
   routes,
   mode: 'history'
 })
+
+Vue.use(Router)

@@ -22,6 +22,18 @@
       <v-spacer></v-spacer>
 
       <v-btn
+        to="/"
+        text
+      >
+        <span class="mr-2">SQL</span>
+      </v-btn>
+      <v-btn
+        to="/settings"
+        text
+      >
+        <span class="mr-2">Settings</span>
+      </v-btn>
+      <v-btn
         href=""
         text
       >
@@ -30,18 +42,21 @@
     </v-app-bar>
 
     <v-main>
-      <WebSQL/>
+      <router-view/>
     </v-main>
   </v-app>
 </template>
 
 <script>
 import WebSQL from './components/WebSQL.vue'
+import Settings from './components/Settings.vue'
+
 export default {
   name: 'app',
 
   components: {
-    WebSQL
+    WebSQL,
+    Settings
   },
   data: () => ({
     //
