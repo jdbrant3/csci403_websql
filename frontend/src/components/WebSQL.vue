@@ -99,7 +99,6 @@ export default {
 
       axios.post(path, {query: this.query})
       .then(response => {
-        console.log(response.data);
         let headers = null;
         let rows = response.data;
         if (rows) {

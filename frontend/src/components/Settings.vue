@@ -1,62 +1,49 @@
 <template>
   <v-container>
-    <v-row class="text-center">
-      <v-col class="mb-4">
-        <h1>SETTINGS!</h1>
-        <v-textarea
-          v-model="query"
-          label="SQL"
-          auto-grow
-          outlined
-          filled
-          clearable
-        >
-        </v-textarea>
-        <v-btn
-                @click="execute_sql_backend"
-                color="green"
-                :disabled="!query"
-                rounded
-        >
-          run
-        </v-btn>
+    <v-row align="left">
+      <v-col cols="3"></v-col>
+      <v-col class="mb-4" cols="6">
+        <v-alert v-if="error_state" type="error">
+          {{ error_message }}
+        </v-alert>
+        <div v-else>
+          <div class="text-h4 mb-4">Current settings for {{ current_user }}</div>
+          <v-card class="mb4" width="100%">
+            <v-card-title>Search path</v-card-title>
+            <v-card-text v-if="!is_editing_search_path"  align="left">
+              {{ current_search_path.join(", ") }}
+            </v-card-text>
+            <v-card-text v-else>
+              <v-container>
+                <v-row cols="12">
+                  <v-col class="mx-2" cols="5">
+                    <div class="text-subtitle-1">Search Path</div>
+                    <draggable v-model="current_search_path" group="sp" @start="drag=true" @end="drag=false">
+                      <v-card class="mb-1" v-for="s in current_search_path" :key="s">{{ s }}</v-card>
+                    </draggable>
+                  </v-col>
+                  <v-col class="mx-2" cols="5">
+                    <div class="text-subtitle-1">Available Schemas</div>
+                    <draggable v-model="available_schemas" group="sp" @start="drag=true" @end="drag=false">
+                      <v-card class="mb-1" v-for="s in available_schemas" :key="s">{{ s }}</v-card>
+                    </draggable>
+                  </v-col>
+                </v-row>
+              </v-container>
+            </v-card-text>
+            <v-card-actions v-if="!is_editing_search_path">
+              <v-spacer/>
+              <v-btn text @click="start_editing_search_path">Edit</v-btn>
+            </v-card-actions>
+            <v-card-actions v-else>
+              <v-spacer/>
+              <v-btn text @click="save_search_path">Save</v-btn>
+              <v-btn text @click="cancel_editing_search_path">Cancel</v-btn>
+            </v-card-actions>
+          </v-card>
+        </div>
       </v-col>
-    </v-row>
-    <v-row class="text-center">
-      <v-col cols="12">
-        <v-card
-          v-if="results.length > 0"
-        >
-          <v-tabs
-            v-model="tab"
-            vertical
-            height="250px"
-          >
-            <v-tab
-              v-for="(result, idx) in results"
-              :key="idx"
-            >
-              {{ idx + 1 }}
-            </v-tab>
-            <v-tab-item
-              v-for="(result, idx) in results"
-              :key="idx"
-            >
-              <v-data-table
-                :caption="result.query"
-                :headers="result.headers"
-                :items="result.rows"
-                dense
-                fixed-header
-                disable-filtering
-                disable-sort
-                height="250px"
-              >
-              </v-data-table>
-            </v-tab-item>
-          </v-tabs>
-        </v-card>
-      </v-col>
+      <v-col cols="3"></v-col>
     </v-row>
   </v-container>
 </template>
@@ -64,38 +51,107 @@
 
 <script>
 import axios from 'axios'
+import draggable from 'vuedraggable'
+
 export default {
+  components: {
+    draggable
+  },
+
   name: 'Settings',
 
   data: () => ({
-    query: '',
-    results: [],
-    tab: null
+    current_user: '',
+    current_search_path: [],
+    error_state: false,
+    error_message: '',
+    is_editing_search_path: false,
+    available_schemas: []
   }),
 
-  methods: {
-    execute_sql_backend: async function () {
-      const path = `http://localhost:5000/api/query`
-      axios.post(path, {query: this.query})
-        .then(response => {
-          console.log(response.data)
-          let headers = null
-          let rows = response.data
-          if (rows) {
-            headers = Object.keys(rows[0]).map(
-                e => ({ text: e, value: e })
-              )
-          }
-          this.results.push({
-            query: this.query,
-            headers: headers,
-            rows: rows
+  mounted () {
+    this.get_user()
+      .then(response => {
+        this.current_user = response
+        this.get_search_path()
+          .then(response => {
+            this.current_search_path = response
           })
+          .catch(error => {
+            console.log(error)
+            this.error_message = 'Error retrieving search path!'
+            this.error_state = true
+          })
+      })
+      .catch(error => {
+        console.log(error)
+        this.error_message = 'Error retrieving user name!'
+        this.error_state = true
+      })
+  },
+
+  methods: {
+    async get_one_string (query) {
+      const path = `http://localhost:5000/api/query`
+      let response = await axios.post(path, {query: query})
+      let rows = response.data
+      return Object.values(rows[0])[0]
+    },
+
+    get_user () {
+      return this.get_one_string('select current_user')
+    },
+
+    async get_search_path () {
+      let sp = await this.get_one_string('show search_path')
+      return sp.split(',').map(el => {
+        if (el === '"$user"') return this.current_user
+        return el
+      })
+    },
+
+    start_editing_search_path () {
+      const path = `http://localhost:5000/api/query`
+      axios.post(path, {query: 'select schema_name from information_schema.schemata order by schema_name'})
+        .then(response => {
+          let rows = response.data
+          this.available_schemas = rows
+            .map(el => el.schema_name)
+            .filter(s => !this.current_search_path.includes(s))
+          this.is_editing_search_path = true
         })
         .catch(error => {
           console.log(error)
+          this.error_message = 'Error retrieving available schemas'
+          this.error_state = true
         })
-      this.tab = this.results.length - 1
+    },
+
+    save_search_path () {
+      const path = `http://localhost:5000/api/query`
+      let query = 'alter user current_user set search_path to ' + this.current_search_path.join(', ')
+      axios.post(path, {query: query})
+        .then(() => {
+          this.is_editing_search_path = false
+        })
+        .catch(error => {
+          console.log(error)
+          this.is_editing_search_path = false
+        })
+    },
+
+    cancel_editing_search_path () {
+      this.get_search_path()
+        .then(response => {
+          this.current_search_path = response
+          this.is_editing_search_path = false
+        })
+        .catch(error => {
+          console.log(error)
+          this.error_message = 'Error retrieving search path!'
+          this.error_state = true
+          this.is_editing_search_path = false
+        })
     }
   }
 }
