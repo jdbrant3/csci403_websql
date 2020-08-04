@@ -14,7 +14,7 @@
             sm="8"
             md="4"
           >
-          <v-img src="https://cs-courses.mines.edu/csci303/CSLogoNew.jpg"/>
+          <v-img src="http://cs-courses.mines.edu/csci101/static/dept_logo.png"/>
             <v-card class="elevation-12">
               <v-toolbar
                 color="primary"
@@ -35,7 +35,7 @@
                       <v-icon>mdi-code-tags</v-icon>
                     </v-btn>
                   </template>
-                  <span>Source</span>
+                  <!-- <span>Source</span> -->
                 </v-tooltip>
               </v-toolbar>
               <v-card-text>
@@ -45,6 +45,7 @@
                     name="login"
                     prepend-icon="mdi-account"
                     type="text"
+                    v-model="username"
                   ></v-text-field>
 
                   <v-text-field
@@ -53,12 +54,13 @@
                     name="password"
                     prepend-icon="mdi-lock"
                     type="password"
+                    v-model="password"
                   ></v-text-field>
                 </v-form>
               </v-card-text>
               <v-card-actions>
                 <v-spacer></v-spacer>
-                <v-btn  @click="$router.push('websql')" color="primary">Login</v-btn>
+                <v-btn  @click="authenticate" color="primary">Login</v-btn>
               </v-card-actions>
             </v-card>
           </v-col>
@@ -73,34 +75,25 @@ import axios from 'axios'
 export default {
     name: 'Login',
 
-    data: () => ({
-      uname: '',
-      pass: ''
-    }),
+    data () {
+      return {
+        username: '',
+        password: '',
+        errorMsg: ''
+    }
+  },
 
     methods: {
-      execute_login: async function () {
-        const path = `http://localhost:5000/api/login`
-        axios.post(path, {uname: this.uname, pass: this.pass})
-        .then(response => {
-            console.log(response.data);
-            let headers = null;
-            let rows = response.data;
-            if (rows) {
-              headers = Object.keys(rows[0]).map(
-                e => ({ text: e, value: e})
-              );
-            }
-            this.results.push({
-                query: this.query,
-                headers: headers,
-                rows: rows
-            })
-        })
+      authenticate () {
+        const path = `http://localhost:5000/api/auth`
+        console.log('User data: ', {username: this.username, password: this.password})
+        axios.post(path, {username: this.username, password: this.password})
+        .then((response) => 
+        this.$router.push('websql'))
         .catch(error => {
-            console.log(error)
+            console.log('Error Authenticating: ', error)
+            
         })
-        this.tab = this.results.length - 1
       }
     }
   }

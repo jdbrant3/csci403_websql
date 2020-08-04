@@ -1,8 +1,8 @@
 {
     "dbname": "coursedev",
-    "user": "username",
+    "user": "USERNAME",
     "host": "flowers.mines.edu",
-    "password": "password",
+    "password": "PASSWORD",
     "port": "5433",
     "schema": "coursedev"
 }
