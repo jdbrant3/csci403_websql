@@ -14,6 +14,7 @@
             sm="8"
             md="4"
           >
+          <v-img src="https://cs-courses.mines.edu/csci303/CSLogoNew.jpg"/>
             <v-card class="elevation-12">
               <v-toolbar
                 color="primary"
@@ -40,7 +41,7 @@
               <v-card-text>
                 <v-form>
                   <v-text-field
-                    label="Login"
+                    label="Username"
                     name="login"
                     prepend-icon="mdi-account"
                     type="text"
@@ -68,9 +69,39 @@
 </template>
 
 <script>
-  export default {
-    props: {
-      source: String
+import axios from 'axios'
+export default {
+    name: 'Login',
+
+    data: () => ({
+      uname: '',
+      pass: ''
+    }),
+
+    methods: {
+      execute_login: async function () {
+        const path = `http://localhost:5000/api/login`
+        axios.post(path, {uname: this.uname, pass: this.pass})
+        .then(response => {
+            console.log(response.data);
+            let headers = null;
+            let rows = response.data;
+            if (rows) {
+              headers = Object.keys(rows[0]).map(
+                e => ({ text: e, value: e})
+              );
+            }
+            this.results.push({
+                query: this.query,
+                headers: headers,
+                rows: rows
+            })
+        })
+        .catch(error => {
+            console.log(error)
+        })
+        this.tab = this.results.length - 1
+      }
     }
   }
 </script>

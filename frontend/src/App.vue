@@ -14,6 +14,14 @@
           transition="scale-transition"
           width="40"
         />
+        <!-- <v-img
+          alt="Mines Logo"
+          class="shrink mr-2"
+          contain
+          src="..\assets\cs_dept_logo_cropped.png"
+          transition="scale-transition"
+          width="40"
+        /> -->
         <span>
           Web SQL Interface
         </span>
