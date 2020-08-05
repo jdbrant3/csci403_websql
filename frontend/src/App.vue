@@ -14,11 +14,19 @@
           transition="scale-transition"
           width="40"
         />
+        <!-- <v-img
+          alt="Mines Logo"
+          class="shrink mr-2"
+          contain
+          src="..\assets\cs_dept_logo_cropped.png"
+          transition="scale-transition"
+          width="40"
+        /> -->
         <span>
           Web SQL Interface
         </span>
       </div>
-
+      
       <v-spacer></v-spacer>
 
       <v-btn
@@ -36,27 +44,37 @@
       <v-btn
         href=""
         text
+        @click="$router.push('login')"
       >
         <span class="mr-2">Logout</span>
       </v-btn>
     </v-app-bar>
 
     <v-main>
-      <router-view/>
+    <!-- <div id="nav">
+      <router-link to="/">Home</router-link> |
+      <router-link to="/login">Login</router-link> |
+      <router-link to="/websql">WebSQL</router-link>
+    </div> -->
+    <router-view/>
     </v-main>
   </v-app>
 </template>
 
 <script>
+import Login from './components/Login.vue'
 import WebSQL from './components/WebSQL.vue'
 import Settings from './components/Settings.vue'
+import NotFound from './components/NotFound.vue'
 
 export default {
   name: 'app',
 
   components: {
+    Login,
     WebSQL,
-    Settings
+    Settings,
+    NotFound
   },
   data: () => ({
     //
