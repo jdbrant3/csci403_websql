@@ -11,6 +11,8 @@ import json
 import jwt
 from datetime import datetime, timedelta
 
+from psycopg2 import Error
+
 from cryptography.fernet import Fernet
 from flask_jwt_extended import jwt_required, create_access_token, get_jwt_identity, JWTManager
 from pydantic import BaseModel
@@ -23,7 +25,7 @@ app = Flask(__name__,
 cors = CORS(app, resources={r"/api/*": {"origins": "*"}})
 
 # jwt = JWTManager(app)
-app.config["JWT_SECRET_KEY"] = "naturally Hans is wet, he is standing under a waterfall"
+# app.config["JWT_SECRET_KEY"] = "naturally Hans is wet, he is standing under a waterfall"
 AUTHSECRET = "naturally Hans is wet, he is standing under a waterfall"
 
 
@@ -52,19 +54,21 @@ def execute_query():
             else:
                 cursor.execute(query)
                 return json.dumps({ 'result' : 'success' })
-        except:
-            print("Cannot fetch Query:", query)
+
+        except pg.OperationalError as e:
+            print('Unable to connect!\n{0}').format(e)
             connection = None
-            app.logger.error("Line 57")
+            # app.logger.error(e)
             return jsonify({ 'message': 'Cannot fetch Query'+ query }), 401
 
-    except (Exception, pg.Error) as error :
-        print ("Error while connecting to PostgreSQL", error)
-        app.logger.exception(error)
+    except (Exception, pg.OperationalError) as error :
+        print ("psycopg2 error:", error)
+        # app.logger.exception(error)
         # connection = None
         return jsonify({ 'message': 'Connection Failed' }), 401
     finally:
         #closing database connection.
+            connection = None
             if(connection):
                 cursor.close()
                 connection.close()
