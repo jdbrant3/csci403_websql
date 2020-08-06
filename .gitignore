@@ -11,7 +11,7 @@ frontend/node_modules/
 __pycache__
 backend/venv
 *.pyc
-database_testing.py
+database_connection.py
 
 # macOs
 .DS_Store

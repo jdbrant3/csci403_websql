@@ -144,8 +144,8 @@ def auth():
                                 database = conn_config['dbname'])
 
     except (Exception, pg.Error) as error :
-        app.logger.error("Line 76", error)
         return jsonify({ 'message': 'Login Failed', 'authenticated': False }), 401
+        
     finally:
         #closing database connection.
             if(connection):
