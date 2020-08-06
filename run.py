@@ -10,23 +10,17 @@ from psycopg2 import Error
 import json
 import jwt
 from datetime import datetime, timedelta
-
 from psycopg2 import Error
 from cryptography.fernet import Fernet
 from flask_jwt_extended import jwt_required, create_access_token, get_jwt_identity, JWTManager
 from pydantic import BaseModel
-
-# from app.models import Users
 
 app = Flask(__name__,
             static_folder = "../dist/static",
             template_folder = "../dist")
 cors = CORS(app, resources={r"/api/*": {"origins": "*"}})
 
-
-app.secret_key = b'YOUR SECRET KEY HERE'
-
-print("app config:", app.config)
+app.secret_key = b'YOUR_SECRET_KEY'
 
 @app.route('/api/query', methods=['POST'])
 def execute_query():
@@ -105,9 +99,11 @@ def login():
 
     if authorize_login(username, password):
         session["USERNAME"] = username
-        f = Fernet(key)
+        f = Fernet(app.secret_key)
         token = f.encrypt(b'password')
         session["PASSWORD"] = token
+
+        session["TIME"] = datetime.utcnow()
         print("Session Created:", session)
             
         return jsonify({'username': session["USERNAME"], 'authorized': True})
@@ -115,11 +111,11 @@ def login():
         return jsonify({'username': username, 'authorized': False})
 
 
-@app.route("/api/logout", methods=["POST"])
-def logout():
-    token = request.form.get("token")
-    status = authModel.blacklist(token)
-    return {'success': status}
+# @app.route("/api/logout", methods=["POST"])
+# def logout():
+#     token = request.form.get("token")
+#     status = authModel.blacklist(token)
+#     return {'success': status}
 
 
 @app.route('/', defaults={'path': ''})
