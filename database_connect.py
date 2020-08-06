@@ -20,12 +20,11 @@ try:
     print("You are connected to - ", record,"\n")
 
     
-
     try:
         # query = "SELECT concat(first,' ', last) as name, school, known_for as description FROM pioneers.pioneers_people WHERE school = 'Stanford University';"
         # print("Enter SQL query:", end=' ')
         # query = input()
-        query = "SEECT last, first FROM pioneers.pioneers_people;"
+        query = "SELECT last, first FROM pioneers.pioneers_people;"
         table = pd.read_sql(query, connection)
         df = pd.DataFrame(table)
         # print(tabulate(df, headers = df.columns, tablefmt = 'psql'))
