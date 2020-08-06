@@ -2,20 +2,17 @@ from flask import Flask, render_template, jsonify, session, request
 from random import *
 from flask_cors import CORS
 import requests
-import psycopg2 as pg 
-import pandas as pd 
-import pandas.io.sql as psql 
-from tabulate import tabulate
-from psycopg2 import Error
+import psycopg2 as pg
 import json
 import jwt
 from datetime import datetime, timedelta
+import re
 
 from psycopg2 import Error
 
 from cryptography.fernet import Fernet
-from flask_jwt_extended import jwt_required, create_access_token, get_jwt_identity, JWTManager
-from pydantic import BaseModel
+#from flask_jwt_extended import jwt_required, create_access_token, get_jwt_identity, JWTManager
+#from pydantic import BaseModel
 
 # from app.models import Users
 
@@ -27,6 +24,38 @@ cors = CORS(app, resources={r"/api/*": {"origins": "*"}})
 # jwt = JWTManager(app)
 # app.config["JWT_SECRET_KEY"] = "naturally Hans is wet, he is standing under a waterfall"
 AUTHSECRET = "naturally Hans is wet, he is standing under a waterfall"
+
+def parse(query_string):
+    multiline_comment = re.compile(r'(\s*/\*.*?\*/)', flags = re.MULTILINE|re.DOTALL)
+    single_line_comment = re.compile(r'(\s*--.*$)', flags = re.MULTILINE)
+
+    # let ; terminate each query (assume comments go only with following queries)
+    queries = query_string.split(';')
+
+    result = []
+
+    for q in queries:
+        comment = ''
+        while True:
+
+            match = multiline_comment.match(q)
+            if match:
+                comment = comment + match.group(0);
+                q = q[match.end():]
+                continue
+
+            match = single_line_comment.match(q)
+            if match:
+                comment = comment + match.group(0);
+                q = q[match.end():]
+                continue
+
+            # if we found no leading comments, assume the rest is query
+            break
+
+        result.append((q.strip(), comment.strip()))
+
+    return result
 
 
 @app.route('/api/query', methods=['POST'])
@@ -44,35 +73,59 @@ def execute_query():
         connection.autocommit = True
         cursor = connection.cursor()
     
-        try:
-            query = request.json['query'].lstrip()
+        queries = parse(request.json['query'])
+        results = []
 
-            if query.lower()[0:5] == 'show ' or query.lower()[0:7] == 'select ':
-                table = pd.read_sql(query, connection)
-                response = table.to_json(orient='records')
-                return response
+        for (query, comment) in queries:
+            if query == '':
+                if len(comment) > 0:
+                    results.append({ 'comment' : comment })
+            elif query.lower()[0:5] == 'show ' or query.lower()[0:7] == 'select ':
+                query = query + ';'
+                try:
+                    cursor.execute(query)
+                    rowcount = cursor.rowcount
+
+                    # should make this a settable limit on the client side at some point
+                    limit_message = ''
+                    if (rowcount > 500):
+                        data = cursor.fetchmany(500)
+                        limit_message = 'Query resulted in ' + str(rowcount) + ' rows, exceeding limit.  First 500 rows displayed above.'
+                    else:
+                        data = cursor.fetchall()
+
+                    # convert to strings, not all types convert to JSON
+                    data = [ [ str(item) for item in row ] for row in data ]
+
+                    columns = [ el[0] for el in cursor.description ]
+
+                    results.append({ 'query' : query,
+                                     'comment' : comment,
+                                     'data' : data ,
+                                     'columns' : columns,
+                                     'limit_message' : limit_message
+                                     })
+                except pg.Error as e:
+                    results.append({ 'query' : query, 'comment' : comment, 'error' : str(e) })
+                    break
             else:
-                cursor.execute(query)
-                return json.dumps({ 'result' : 'success' })
+                query = query + ';'
+                try:
+                    cursor.execute(query)
+                    rowcount = cursor.rowcount
+                    results.append({ 'query' : query, 'comment' : comment, 'message' : cursor.statusmessage })
+                except pg.Error as e:
+                    results.append({ 'query' : query, 'comment' : comment, 'error' : str(e) })
+                    break
 
-        except pg.OperationalError as e:
-            print('Unable to connect!\n{0}').format(e)
-            connection = None
-            # app.logger.error(e)
-            return jsonify({ 'message': 'Cannot fetch Query'+ query }), 401
+        cursor.close()
+        connection.close()
+        return json.dumps(results)
 
-    except (Exception, pg.OperationalError) as error :
-        print ("psycopg2 error:", error)
-        # app.logger.exception(error)
+    except (Exception, pg.Error) as error :
+        app.logger.exception(error)
         # connection = None
         return jsonify({ 'message': 'Connection Failed' }), 401
-    finally:
-        #closing database connection.
-            connection = None
-            if(connection):
-                cursor.close()
-                connection.close()
-                # print("PostgreSQL connection is closed")
 
 
 @app.route('/api/auth', methods=["POST"])

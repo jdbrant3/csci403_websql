@@ -1,4 +1,3 @@
-/* es-lint ignore */
 <template>
   <v-container>
     <v-row class="text-center">
@@ -30,29 +29,45 @@
           <v-tabs
             v-model="tab"
             vertical
-            height="250px"
           >
             <v-tab
               v-for="(result, idx) in results"
-              :key="idx"
+              :key="'tab-' + idx"
             >
               {{ idx + 1 }}
             </v-tab>
             <v-tab-item
-              v-for="(result, idx) in results"
-              :key="idx"
+              class="text-left"
+              v-for="(run, idx) in results"
+              :key="'result-' + idx"
             >
-              <v-data-table
-                      :caption="result.query"
-                      :headers="result.headers"
-                      :items="result.rows"
-                      dense
-                      fixed-header
-                      disable-filtering
-                      disable-sort
-                      height="250px"
-              >
-              </v-data-table>
+              <v-card class="ma-4 pa-4" rounded v-for="(result, idx2) in run" :key="'result-' + idx + '-' + idx2">
+                <pre v-if="result.comment">{{ result.comment }}</pre>
+                <pre v-if="result.query">{{ result. query }}</pre>
+                <v-alert v-if="result.error" type="error">
+                  <pre>{{ result.error }}</pre>
+                </v-alert>
+                <div v-else>
+                  <v-data-table
+                    class="mt-4"
+                    v-if="result.data"
+                    :headers="result.columns"
+                    :items="result.data"
+                    dense
+                    fixed-header
+                    disable-filtering
+                    disable-sort
+                    items-per-page="10"
+                  />
+                  <p
+                    v-if="result.limit_message && result.limit_message.length > 0"
+                    class="info pa-2"
+                  >
+                    {{ result.limit_message }}
+                  </p>
+                  <v-alert v-if="result.message" type="success">{{ result.message }}</v-alert>
+                </div>
+              </v-card>
             </v-tab-item>
           </v-tabs>
         </v-card>
@@ -69,7 +84,7 @@ export default {
 
   data: () => ({
     query: '',
-    results: [],
+    raw_results: [],
     tab: null
   }),
 
@@ -77,16 +92,39 @@ export default {
     if (sessionStorage.getItem('query')) {
       this.query = sessionStorage.getItem('query');
     }
-    if (sessionStorage.getItem('results')) {
+    if (sessionStorage.getItem('raw_results')) {
       try {
-        this.results = JSON.parse(sessionStorage.getItem('results'));
+        this.raw_results = JSON.parse(sessionStorage.getItem('raw_results'));
       }
       catch(e) {
-        sessionStorage.removeItem('results');
+        sessionStorage.removeItem('raw_results');
       }
     }
     if (sessionStorage.getItem('tab')) {
       this.tab = parseInt(sessionStorage.getItem('tab'));
+    }
+  },
+
+  computed: {
+    // convert results into v-data-table happy form
+    results: function() {
+      return this.raw_results.map(run => {
+        return run.map(result => {
+          if ('data' in result) {
+            result.data = result.data.map(row => {
+              let conversion = {}
+              for (let index = 0; index < row.length; index++) {
+                conversion[result.columns[index]] = row[index]
+              }
+              return conversion
+            })
+          }
+          if ('columns' in result) {
+            result.columns = result.columns.map(el => ({ text: el, value: el }))
+          }
+          return result;
+        })
+      })
     }
   },
 
@@ -99,20 +137,11 @@ export default {
 
       axios.post(path, {query: this.query})
       .then(response => {
-        let headers = null;
-        let rows = response.data;
-        if (rows) {
-          headers = Object.keys(rows[0]).map(
-            e => ({ text: e, value: e})
-          );
-        }
-        this.results.push({
-          query: this.query,
-          headers: headers,
-          rows: rows
-        });
-        this.tab = this.results.length - 1;
-        sessionStorage.setItem('results', JSON.stringify(this.results));
+        let result = response.data;
+        // console.log(result)
+        this.raw_results.push(result);
+        this.tab = this.raw_results.length - 1;
+        sessionStorage.setItem('raw_results', JSON.stringify(this.raw_results));
         sessionStorage.setItem('tab', this.tab);
       })
       .catch(error => {
