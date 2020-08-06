@@ -85,7 +85,7 @@ export default {
 
     methods: {
       authenticate () {
-        const path = `http://localhost:5000/api/auth`
+        const path = `http://localhost:5000/api/login`
         console.log('User data: ', {username: this.username, password: this.password})
         axios.post(path, {username: this.username, password: this.password})
         .then((response) => 
