@@ -21,6 +21,8 @@ app = Flask(__name__,
             template_folder = "../dist")
 cors = CORS(app, resources={r"/api/*": {"origins": "*"}})
 
+print(app.config)
+
 # jwt = JWTManager(app)
 # app.config["JWT_SECRET_KEY"] = "naturally Hans is wet, he is standing under a waterfall"
 AUTHSECRET = "naturally Hans is wet, he is standing under a waterfall"
@@ -40,13 +42,13 @@ def parse(query_string):
 
             match = multiline_comment.match(q)
             if match:
-                comment = comment + match.group(0);
+                comment = comment + match.group(0)
                 q = q[match.end():]
                 continue
 
             match = single_line_comment.match(q)
             if match:
-                comment = comment + match.group(0);
+                comment = comment + match.group(0)
                 q = q[match.end():]
                 continue
 
@@ -191,11 +193,11 @@ def auth():
 #     return jsonify(logged_in_as=current_user), 200
 
 
-@app.route("/api/logout", methods=["POST"])
-def logout():
-    token = request.form.get("token")
-    status = authModel.blacklist(token)
-    return {'success': status}
+# @app.route("/api/logout", methods=["POST"])
+# def logout():
+#     token = request.form.get("token")
+#     status = authModel.blacklist(token)
+#     return {'success': status}
 
 
 @app.route('/', defaults={'path': ''})
