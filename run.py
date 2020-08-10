@@ -98,13 +98,14 @@ def login():
         return jsonify({"msg": "Missing password parameter"}), 400
 
     if authorize_login(username, password):
-        session["USERNAME"] = username
-        f = Fernet(app.secret_key)
-        token = f.encrypt(b'password')
-        session["PASSWORD"] = token
 
-        session["TIME"] = datetime.utcnow()
-        print("Session Created:", session)
+        f = Fernet(app.secret_key)
+        encrypt_pass = f.encrypt(b'password')
+        session[username] = [username, encrypt_pass, datetime.utcnow()]
+        print("Session Created:", session[username])
+
+        res = make_response("Setting a cookie")
+        res.set_cookie(username, username)
             
         return jsonify({'username': session["USERNAME"], 'authorized': True})
     else:
