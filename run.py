@@ -20,7 +20,7 @@ app = Flask(__name__,
             template_folder = "../dist")
 cors = CORS(app, resources={r"/api/*": {"origins": "*"}})
 
-app.secret_key = b'YOUR_SECRET_KEY'
+# app.secret_key = b'YOUR_SECRET_KEY'
 
 @app.route('/api/query', methods=['POST'])
 def execute_query():
