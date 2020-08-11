@@ -1,4 +1,4 @@
-from flask import Flask, render_template, jsonify, session, request
+from flask import Flask, render_template, jsonify, session, request, redirect, url_for
 from random import *
 from flask_cors import CORS
 import requests
@@ -10,8 +10,7 @@ import json
 from datetime import datetime, timedelta
 from psycopg2 import Error
 from cryptography.fernet import Fernet
-# from flask_jwt_extended import jwt_required, create_access_token, get_jwt_identity, JWTManager
-# from pydantic import BaseModel
+
 
 app = Flask(__name__,
             static_folder = "../dist/static",
@@ -26,9 +25,11 @@ def execute_query():
         with open('db_conn_config.json') as config_file:
             conn_config = json.load(config_file)
 
-        if 'username' in session:
+        if 'username' not in session:
+            return jsonify({'message': 'Not logged in'})
+
+        else:
             session_username = session['username']
-            
             f = Fernet(app.secret_key)
             session_password = f.decrypt(session['password']).decode("utf-8")
 
@@ -55,11 +56,13 @@ def execute_query():
 
         except pg.OperationalError as e:
             print('Unable to connect!\n{0}').format(e)
+            app.logger.error(e)
             connection = None
             return jsonify({ 'message': 'Cannot fetch Query'+ query }), 401
 
     except (Exception, pg.OperationalError) as error :
         print ("psycopg2 error:", error)
+        app.logger.error(error)
         return jsonify({ 'message': 'Connection Failed' }), 401
     finally:
         #closing database connection.
@@ -85,7 +88,8 @@ def authorize_login(username, password):
             return True
 
     except (Exception, pg.Error) as error :
-        app.logger.error(error)
+        # app.logger.error(error)
+        print(error)
         connection = None
         return False
 
@@ -97,24 +101,25 @@ def login():
     password = request.json['password'].strip()
 
     if not username:
-        return jsonify({"msg": "Missing username parameter"}), 400
+        return jsonify({"message": "Missing username parameter"}), 400
     if not password:
-        return jsonify({"msg": "Missing password parameter"}), 400
+        return jsonify({"message": "Missing password parameter"}), 400
 
     if authorize_login(username, password):
 
-        f = Fernet(app.secret_key)
-        encrypt_pass = f.encrypt(b'password')
-        # session[username] = [username, encrypt_pass, datetime.utcnow()]
-        session['username'] = username
-        session['password'] = encrypt_pass
-        session['time'] = datetime.utcnow()
-        print("Session Created:", session[username])
-
+        if username not in session:
+            f = Fernet(app.secret_key)
+            encrypt_pass = f.encrypt(b'password')
+            session['username'] = username
+            session['password'] = encrypt_pass
+            print("----SESSION CREATED----")
+            print(session)
+            return jsonify({'username': username, 'authorized': True})
+        else:
+            return jsonify({'username': username, 'authorized': True})
         # res = make_response("Setting a cookie")
         # res.set_cookie(username, username)
-            
-        return jsonify({'username': session["USERNAME"], 'authorized': True})
+
     else:
         return jsonify({'username': username, 'authorized': False})
 
