@@ -5,22 +5,20 @@ import requests
 import psycopg2 as pg 
 import pandas as pd 
 import pandas.io.sql as psql 
-from tabulate import tabulate
 from psycopg2 import Error
 import json
-import jwt
 from datetime import datetime, timedelta
 from psycopg2 import Error
 from cryptography.fernet import Fernet
-from flask_jwt_extended import jwt_required, create_access_token, get_jwt_identity, JWTManager
-from pydantic import BaseModel
+# from flask_jwt_extended import jwt_required, create_access_token, get_jwt_identity, JWTManager
+# from pydantic import BaseModel
 
 app = Flask(__name__,
             static_folder = "../dist/static",
             template_folder = "../dist")
 cors = CORS(app, resources={r"/api/*": {"origins": "*"}})
 
-# app.secret_key = b'YOUR_SECRET_KEY'
+app.secret_key = b'4sJk37OyLp-yMsrncQxKF7x_wOT1cywCCPnFCIdzp9M='
 
 @app.route('/api/query', methods=['POST'])
 def execute_query():
@@ -28,6 +26,11 @@ def execute_query():
         with open('db_conn_config.json') as config_file:
             conn_config = json.load(config_file)
 
+        if 'username' in session:
+            session_username = session['username']
+            
+            f = Fernet(app.secret_key)
+            session_password = f.decrypt(session['password']).decode("utf-8")
 
         connection = pg.connect(user = session_username,
                                 password = session_password,
@@ -82,15 +85,16 @@ def authorize_login(username, password):
             return True
 
     except (Exception, pg.Error) as error :
+        app.logger.error(error)
         connection = None
         return False
 
 
 @app.route('/api/login', methods=['POST'])
 def login():
+
     username = request.json['username'].strip()
     password = request.json['password'].strip()
-    nickname = request.json['username'].strip()
 
     if not username:
         return jsonify({"msg": "Missing username parameter"}), 400
@@ -101,11 +105,14 @@ def login():
 
         f = Fernet(app.secret_key)
         encrypt_pass = f.encrypt(b'password')
-        session[username] = [username, encrypt_pass, datetime.utcnow()]
+        # session[username] = [username, encrypt_pass, datetime.utcnow()]
+        session['username'] = username
+        session['password'] = encrypt_pass
+        session['time'] = datetime.utcnow()
         print("Session Created:", session[username])
 
-        res = make_response("Setting a cookie")
-        res.set_cookie(username, username)
+        # res = make_response("Setting a cookie")
+        # res.set_cookie(username, username)
             
         return jsonify({'username': session["USERNAME"], 'authorized': True})
     else:
