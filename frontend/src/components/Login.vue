@@ -65,6 +65,8 @@
             </v-card>
           </v-col>
         </v-row>
+        <div>
+        </div>
       </v-container>
     </v-main>
   </v-app>
@@ -75,19 +77,20 @@ import axios from 'axios'
 export default {
     name: 'Login',
 
-    data () {
-      return {
-        username: '',
-        password: '',
-        errorMsg: ''
-    }
-  },
+    data: () => ({
+      username: '',
+      password: '',
+      errorMessage: ''
+  }),
 
     methods: {
       authenticate () {
         const path = `http://localhost:5000/api/login`
-        console.log('User data: ', {username: this.username, password: this.password})
-        axios.post(path, {username: this.username, password: this.password})
+        const axiosWithCookies = axios.create({
+          withCredentials: true
+        });
+        const promise = axiosWithCookies.post(path, {username: this.username, password: this.password})
+        // axios.post(path, {username: this.username, password: this.password})
         .then((response) => 
         this.$router.push('websql'))
         .catch(error => {

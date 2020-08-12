@@ -1,6 +1,6 @@
 from flask import Flask, render_template, jsonify, session, request, redirect, url_for
 from random import *
-from flask_cors import CORS
+from flask_cors import CORS, cross_origin
 import requests
 import psycopg2 as pg 
 import pandas as pd 
@@ -15,11 +15,14 @@ from cryptography.fernet import Fernet
 app = Flask(__name__,
             static_folder = "../dist/static",
             template_folder = "../dist")
-cors = CORS(app, resources={r"/api/*": {"origins": "*"}})
+# cors = CORS(app, resources={r"/api/*": {"origins": "*"}})
+cors = CORS(app, resources={r"/api/*": {'origins': ['http://localhost:8080', 'http://127.0,0,1:8000']}}, headers=['Content-Type'], expose_headers=['Access-Control-Allow-Origin'], supports_credentials=True)
 
 app.secret_key = b'4sJk37OyLp-yMsrncQxKF7x_wOT1cywCCPnFCIdzp9M='
 
+
 @app.route('/api/query', methods=['POST'])
+# @cross_origin(origin='*',headers=['Content-Type','Authorization'])
 def execute_query():
     try:
         with open('db_conn_config.json') as config_file:
@@ -31,7 +34,7 @@ def execute_query():
         else:
             session_username = session['username']
             f = Fernet(app.secret_key)
-            session_password = f.decrypt(session['password']).decode("utf-8")
+            session_password = f.decrypt(session['password']).decode('utf-8')
 
         connection = pg.connect(user = session_username,
                                 password = session_password,
@@ -49,7 +52,7 @@ def execute_query():
             if query.lower()[0:5] == 'show ' or query.lower()[0:7] == 'select ':
                 table = pd.read_sql(query, connection)
                 response = table.to_json(orient='records')
-                return response
+                return response, 200
             else:
                 cursor.execute(query)
                 return json.dumps({ 'result' : 'success' })
@@ -62,7 +65,7 @@ def execute_query():
 
     except (Exception, pg.OperationalError) as error :
         print ("psycopg2 error:", error)
-        app.logger.error(error)
+        # app.logger.error(error)
         return jsonify({ 'message': 'Connection Failed' }), 401
     finally:
         #closing database connection.
@@ -95,6 +98,7 @@ def authorize_login(username, password):
 
 
 @app.route('/api/login', methods=['POST'])
+# @cross_origin(origin='*',headers=['Content-Type','Authorization'])
 def login():
 
     username = request.json['username'].strip()
@@ -108,20 +112,18 @@ def login():
     if authorize_login(username, password):
 
         if username not in session:
+            byte_pass = password.encode()
             f = Fernet(app.secret_key)
-            encrypt_pass = f.encrypt(b'password')
+            encrypt_pass = f.encrypt(byte_pass)
             session['username'] = username
             session['password'] = encrypt_pass
-            print("----SESSION CREATED----")
-            print(session)
-            return jsonify({'username': username, 'authorized': True})
+
+            return jsonify({'username': username, 'authorized': True}), 200
         else:
-            return jsonify({'username': username, 'authorized': True})
-        # res = make_response("Setting a cookie")
-        # res.set_cookie(username, username)
+            return jsonify({'username': username, 'authorized': True}), 200
 
     else:
-        return jsonify({'username': username, 'authorized': False})
+        return jsonify({'username': username, 'authorized': False}), 401
 
 
 # @app.route("/api/logout", methods=["POST"])

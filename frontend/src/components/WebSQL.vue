@@ -96,9 +96,14 @@ export default {
 
       // save the query regardless of success
       sessionStorage.setItem('query', this.query);
-
-      axios.post(path, {query: this.query})
+      // axios.defaults.withCredentials = true
+      const axiosWithCookies = axios.create({
+          withCredentials: true
+        });
+        const promise = axiosWithCookies.post(path, {query: this.query})
+      // axios.post(path, {query: this.query})
       .then(response => {
+        console.log(response)
         let headers = null;
         let rows = response.data;
         if (rows) {
