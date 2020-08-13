@@ -1,30 +1,17 @@
-from flask import Flask, render_template, jsonify, session, request, redirect, url_for
-from random import *
-from flask_cors import CORS, cross_origin
-import requests
-<<<<<<< HEAD
-import psycopg2 as pg
-=======
-import psycopg2 as pg 
-import pandas as pd 
-import pandas.io.sql as psql 
-from psycopg2 import Error
->>>>>>> sessions
 import json
-from datetime import datetime, timedelta
-<<<<<<< HEAD
 import re
+from datetime import datetime, timedelta
+from random import *
 
-=======
->>>>>>> sessions
-from psycopg2 import Error
+import pandas as pd
+import pandas.io.sql as psql
+import psycopg2 as pg
+import requests
 from cryptography.fernet import Fernet
-<<<<<<< HEAD
-#from flask_jwt_extended import jwt_required, create_access_token, get_jwt_identity, JWTManager
-#from pydantic import BaseModel
-=======
->>>>>>> sessions
-
+from flask import (
+    Flask, jsonify, redirect, render_template, request, session, url_for)
+from flask_cors import CORS, cross_origin
+from psycopg2 import Error
 
 app = Flask(__name__,
             static_folder = "../dist/static",
@@ -32,15 +19,7 @@ app = Flask(__name__,
 # cors = CORS(app, resources={r"/api/*": {"origins": "*"}})
 cors = CORS(app, resources={r"/api/*": {'origins': ['http://localhost:8080', 'http://127.0,0,1:8000']}}, headers=['Content-Type'], expose_headers=['Access-Control-Allow-Origin'], supports_credentials=True)
 
-<<<<<<< HEAD
-print(app.config)
-
-# jwt = JWTManager(app)
-# app.config["JWT_SECRET_KEY"] = "naturally Hans is wet, he is standing under a waterfall"
-AUTHSECRET = "naturally Hans is wet, he is standing under a waterfall"
-=======
 app.secret_key = b'4sJk37OyLp-yMsrncQxKF7x_wOT1cywCCPnFCIdzp9M='
->>>>>>> sessions
 
 def parse(query_string):
     multiline_comment = re.compile(r'(\s*/\*.*?\*/)', flags = re.MULTILINE|re.DOTALL)
@@ -100,7 +79,6 @@ def execute_query():
         cursor = connection.cursor()
 
     
-<<<<<<< HEAD
         queries = parse(request.json['query'])
         results = []
 
@@ -154,35 +132,6 @@ def execute_query():
         app.logger.exception(error)
         # connection = None
         return jsonify({ 'message': 'Connection Failed' }), 401
-=======
-        try:
-            query = request.json['query'].lstrip()
-
-            if query.lower()[0:5] == 'show ' or query.lower()[0:7] == 'select ':
-                table = pd.read_sql(query, connection)
-                response = table.to_json(orient='records')
-                return response, 200
-            else:
-                cursor.execute(query)
-                return json.dumps({ 'result' : 'success' })
-
-        except pg.OperationalError as e:
-            print('Unable to connect!\n{0}').format(e)
-            app.logger.error(e)
-            connection = None
-            return jsonify({ 'message': 'Cannot fetch Query'+ query }), 401
-
-    except (Exception, pg.OperationalError) as error :
-        print ("psycopg2 error:", error)
-        # app.logger.error(error)
-        return jsonify({ 'message': 'Connection Failed' }), 401
-    finally:
-        #closing database connection.
-            connection = None
-            if(connection):
-                cursor.close()
-                connection.close()
->>>>>>> sessions
 
 
 
