@@ -1,31 +1,46 @@
-from flask import Flask, render_template, jsonify, session, request
+from flask import Flask, render_template, jsonify, session, request, redirect, url_for
 from random import *
-from flask_cors import CORS
+from flask_cors import CORS, cross_origin
 import requests
+<<<<<<< HEAD
 import psycopg2 as pg
+=======
+import psycopg2 as pg 
+import pandas as pd 
+import pandas.io.sql as psql 
+from psycopg2 import Error
+>>>>>>> sessions
 import json
-import jwt
 from datetime import datetime, timedelta
+<<<<<<< HEAD
 import re
 
+=======
+>>>>>>> sessions
 from psycopg2 import Error
-
 from cryptography.fernet import Fernet
+<<<<<<< HEAD
 #from flask_jwt_extended import jwt_required, create_access_token, get_jwt_identity, JWTManager
 #from pydantic import BaseModel
+=======
+>>>>>>> sessions
 
-# from app.models import Users
 
 app = Flask(__name__,
             static_folder = "../dist/static",
             template_folder = "../dist")
-cors = CORS(app, resources={r"/api/*": {"origins": "*"}})
+# cors = CORS(app, resources={r"/api/*": {"origins": "*"}})
+cors = CORS(app, resources={r"/api/*": {'origins': ['http://localhost:8080', 'http://127.0,0,1:8000']}}, headers=['Content-Type'], expose_headers=['Access-Control-Allow-Origin'], supports_credentials=True)
 
+<<<<<<< HEAD
 print(app.config)
 
 # jwt = JWTManager(app)
 # app.config["JWT_SECRET_KEY"] = "naturally Hans is wet, he is standing under a waterfall"
 AUTHSECRET = "naturally Hans is wet, he is standing under a waterfall"
+=======
+app.secret_key = b'4sJk37OyLp-yMsrncQxKF7x_wOT1cywCCPnFCIdzp9M='
+>>>>>>> sessions
 
 def parse(query_string):
     multiline_comment = re.compile(r'(\s*/\*.*?\*/)', flags = re.MULTILINE|re.DOTALL)
@@ -61,20 +76,31 @@ def parse(query_string):
 
 
 @app.route('/api/query', methods=['POST'])
+# @cross_origin(origin='*',headers=['Content-Type','Authorization'])
 def execute_query():
     try:
         with open('db_conn_config.json') as config_file:
             conn_config = json.load(config_file)
 
-        connection = pg.connect(user = 'jdbrant',
-                                password = 'jimmy123',
+        if 'username' not in session:
+            return jsonify({'message': 'Not logged in'})
+
+        else:
+            session_username = session['username']
+            f = Fernet(app.secret_key)
+            session_password = f.decrypt(session['password']).decode('utf-8')
+
+        connection = pg.connect(user = session_username,
+                                password = session_password,
                                 host = conn_config['host'],
                                 port = conn_config['port'],
                                 database = conn_config['dbname'])
 
         connection.autocommit = True
         cursor = connection.cursor()
+
     
+<<<<<<< HEAD
         queries = parse(request.json['query'])
         results = []
 
@@ -128,69 +154,86 @@ def execute_query():
         app.logger.exception(error)
         # connection = None
         return jsonify({ 'message': 'Connection Failed' }), 401
+=======
+        try:
+            query = request.json['query'].lstrip()
+
+            if query.lower()[0:5] == 'show ' or query.lower()[0:7] == 'select ':
+                table = pd.read_sql(query, connection)
+                response = table.to_json(orient='records')
+                return response, 200
+            else:
+                cursor.execute(query)
+                return json.dumps({ 'result' : 'success' })
+
+        except pg.OperationalError as e:
+            print('Unable to connect!\n{0}').format(e)
+            app.logger.error(e)
+            connection = None
+            return jsonify({ 'message': 'Cannot fetch Query'+ query }), 401
+
+    except (Exception, pg.OperationalError) as error :
+        print ("psycopg2 error:", error)
+        # app.logger.error(error)
+        return jsonify({ 'message': 'Connection Failed' }), 401
+    finally:
+        #closing database connection.
+            connection = None
+            if(connection):
+                cursor.close()
+                connection.close()
+>>>>>>> sessions
 
 
-@app.route('/api/auth', methods=["POST"])
-def auth():
+
+def authorize_login(username, password):
     try:
         with open('db_conn_config.json') as config_file:
             conn_config = json.load(config_file)
 
-        client_username = request.json["username"]
-        client_password = request.json["password"]
 
-        connection = pg.connect(user = client_username,
-                                password = client_password,
+        connection = pg.connect(user = username,
+                                password = password,
                                 host = conn_config['host'],
                                 port = conn_config['port'],
                                 database = conn_config['dbname'])
+        if(connection):
+            return True
 
     except (Exception, pg.Error) as error :
-        return jsonify({ 'message': 'Login Failed', 'authenticated': False }), 401
-        
-    finally:
-        #closing database connection.
-            if(connection):
-                connection.close()
-                token = jwt.encode({
-                    'sub': client_username,
-                    'iat': datetime.utcnow(),
-                    'exp': datetime.utcnow() + timedelta(minutes=30)},
-                    AUTHSECRET)
-                return jsonify({'token': token.decode('UTF-8') })
+        # app.logger.error(error)
+        print(error)
+        connection = None
+        return False
 
 
-# @app.route('/api/login', methods=['POST'])
-# def login():
-#     username = request.json['username']
-#     password = request.json['password']
+@app.route('/api/login', methods=['POST'])
+# @cross_origin(origin='*',headers=['Content-Type','Authorization'])
+def login():
 
-#     if not username:
-#         return jsonify({"msg": "Missing username parameter"}), 400
-#     if not password:
-#         return jsonify({"msg": "Missing password parameter"}), 400
+    username = request.json['username'].strip()
+    password = request.json['password'].strip()
 
-#     # user = Users(username, password)
+    if not username:
+        return jsonify({"message": "Missing username parameter"}), 400
+    if not password:
+        return jsonify({"message": "Missing password parameter"}), 400
 
-#     # if user is None:
-#         # return jsonify({'success': False, 'message': 'Bad username or password'}), 401
+    if authorize_login(username, password):
 
-#     access_token = create_access_token(identity=username)
-#     app.logger.info("Access Token:", access_token)
-#     return jsonify({'success': True, 'token': access_token}), 200
+        if username not in session:
+            byte_pass = password.encode()
+            f = Fernet(app.secret_key)
+            encrypt_pass = f.encrypt(byte_pass)
+            session['username'] = username
+            session['password'] = encrypt_pass
 
+            return jsonify({'username': username, 'authorized': True}), 200
+        else:
+            return jsonify({'username': username, 'authorized': True}), 200
 
-# @app.route('/api/verify-token', methods=['POST'])
-# @jwt_required
-# def verify_token():
-#     return jsonify({success: True}), 200
-
-
-# @app.route('/api/protected', methods=['GET'])
-# @jwt_required
-# def protected():
-#     current_user = get_jwt_identity()
-#     return jsonify(logged_in_as=current_user), 200
+    else:
+        return jsonify({'username': username, 'authorized': False}), 401
 
 
 # @app.route("/api/logout", methods=["POST"])

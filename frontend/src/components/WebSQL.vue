@@ -134,14 +134,36 @@ export default {
 
       // save the query regardless of success
       sessionStorage.setItem('query', this.query);
-
-      axios.post(path, {query: this.query})
+      // axios.defaults.withCredentials = true
+      const axiosWithCookies = axios.create({
+          withCredentials: true
+        });
+        const promise = axiosWithCookies.post(path, {query: this.query})
+      // axios.post(path, {query: this.query})
       .then(response => {
+<<<<<<< HEAD
         let result = response.data;
         // console.log(result)
         this.raw_results.push(result);
         this.tab = this.raw_results.length - 1;
         sessionStorage.setItem('raw_results', JSON.stringify(this.raw_results));
+=======
+        console.log(response)
+        let headers = null;
+        let rows = response.data;
+        if (rows) {
+          headers = Object.keys(rows[0]).map(
+            e => ({ text: e, value: e})
+          );
+        }
+        this.results.push({
+          query: this.query,
+          headers: headers,
+          rows: rows
+        });
+        this.tab = this.results.length - 1;
+        sessionStorage.setItem('results', JSON.stringify(this.results));
+>>>>>>> sessions
         sessionStorage.setItem('tab', this.tab);
       })
       .catch(error => {

@@ -1,5 +1,0 @@
-DBNAME=[flowers.mines.edu]
-DBUSER=[jdbrant]
-DBPASSWORD=[jimmy123]
-AUTHSECRET=[shark]
-EXPIRESSECONDS=3000 

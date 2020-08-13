@@ -12,6 +12,11 @@ __pycache__
 backend/venv
 *.pyc
 database_connection.py
+.flaskenv
 
 # macOs
 .DS_Store
+
+#env
+*.env
+db_conn_config.json
