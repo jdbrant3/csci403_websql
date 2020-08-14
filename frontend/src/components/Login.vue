@@ -26,7 +26,6 @@
                 <v-tooltip bottom>
                   <template v-slot:activator="{ on }">
                     <v-btn
-                      :href="source"
                       icon
                       large
                       target="_blank"
@@ -39,7 +38,12 @@
                 </v-tooltip>
               </v-toolbar>
               <v-card-text>
-                <v-form>
+                <v-form
+                      ref="form"
+                      v-model="isValid" 
+                      lazy-validation
+                      
+                >
                   <v-text-field
                     label="Username"
                     name="login"
@@ -62,9 +66,24 @@
                   ></v-text-field>
                 </v-form>
               </v-card-text>
+              <v-alert v-if="this.show" type="error">Invalid username and/or password.</v-alert>
               <v-card-actions>
                 <v-spacer></v-spacer>
-                <v-btn  @click="authenticate" color="primary">Login</v-btn>
+                <v-btn  
+                        @click="validate" 
+                        color="primary"
+                        class="mr-4"
+                        :disabled="!isValid"
+                >
+                Login
+                </v-btn>
+                <v-btn
+                        @click="reset"
+                        color="error"
+                        class="mr-4"
+                >
+                Reset
+                </v-btn>
               </v-card-actions>
             </v-card>
           </v-col>
@@ -82,26 +101,45 @@ export default {
     name: 'Login',
 
     data: () => ({
-      username: '',
-      password: '',
-      errorMessage: ''
+      username: null,
+      password: null,
+      errorMessage: null,
+      isValid: true,
+      show: false
   }),
 
     methods: {
-      authenticate () {
+      validate () {
         const path = `http://localhost:5000/api/login`
         const axiosWithCookies = axios.create({
           withCredentials: true
         });
         const promise = axiosWithCookies.post(path, {username: this.username, password: this.password})
         .then(response => {
-        console.log(response)
-        this.$router.push('websql')
+          console.log(response)
+          let result = response.data
+          if(result.authorized){
+            this.$router.push('websql')
+          }
+          else{
+            this.isValid = false
+            this.show = true
+          }
+          
+          
         })
         .catch(error => {
             console.log('Error Authenticating: ', error)
             
         })
+      },
+      reset () {
+        this.show = false
+        if(this.$refs.form) {
+          this.$refs.form.reset();
+        }
+        
+        
       }
     }
   }

@@ -157,7 +157,7 @@ def authorize_login(username, password):
 
 
 @app.route('/api/login', methods=['POST'])
-@cross_origin(origin='*',headers=['Content-Type','Authorization'])
+# @cross_origin(origin='*',headers=['Content-Type','Authorization'])
 def login():
 
     username = request.json['username'].strip()
@@ -182,7 +182,8 @@ def login():
             return jsonify({'username': username, 'authorized': True}), 200
 
     else:
-        return jsonify({'username': username, 'authorized': False}), 401
+        app.logger.error("Not authorize_login")
+        return jsonify({'username': username, 'authorized': False}), 200
 
 
 # @app.route("/api/logout", methods=["POST"])
