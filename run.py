@@ -157,7 +157,7 @@ def authorize_login(username, password):
 
 
 @app.route('/api/login', methods=['POST'])
-# @cross_origin(origin='*',headers=['Content-Type','Authorization'])
+@cross_origin(origin='*',headers=['Content-Type','Authorization'])
 def login():
 
     username = request.json['username'].strip()

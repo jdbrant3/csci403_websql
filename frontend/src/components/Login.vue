@@ -46,6 +46,8 @@
                     prepend-icon="mdi-account"
                     type="text"
                     v-model="username"
+                    :rules="[v => !!v || 'username is required']"
+                    required
                   ></v-text-field>
 
                   <v-text-field
@@ -55,6 +57,8 @@
                     prepend-icon="mdi-lock"
                     type="password"
                     v-model="password"
+                    :rules="[v => !!v || 'password is required']"
+                    requried
                   ></v-text-field>
                 </v-form>
               </v-card-text>
@@ -90,9 +94,10 @@ export default {
           withCredentials: true
         });
         const promise = axiosWithCookies.post(path, {username: this.username, password: this.password})
-        // axios.post(path, {username: this.username, password: this.password})
-        .then((response) => 
-        this.$router.push('websql'))
+        .then(response => {
+        console.log(response)
+        this.$router.push('websql')
+        })
         .catch(error => {
             console.log('Error Authenticating: ', error)
             
