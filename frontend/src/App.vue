@@ -44,7 +44,7 @@
       <v-btn
         href=""
         text
-        @click="$router.push('login')"
+        @click="logout"
       >
         <span class="mr-2">Logout</span>
       </v-btn>
@@ -67,6 +67,8 @@ import WebSQL from './components/WebSQL.vue'
 import Settings from './components/Settings.vue'
 import NotFound from './components/NotFound.vue'
 
+import axios from 'axios'
+
 export default {
   name: 'app',
 
@@ -78,7 +80,25 @@ export default {
   },
   data: () => ({
     //
-  })
+  }),
+  methods: {
+    logout () {
+      const path = `http://localhost:5000/api/logout`
+      const axiosWithCookies = axios.create({
+        withCredentials: true
+      })
+      axiosWithCookies.post(path)
+        .then(response => {
+          let result = response.data
+          if (result.success) {
+            this.$router.push('login')
+          }
+        })
+        .catch(error => {
+          console.log('Error Logging Out: ', error)
+        })
+    }
+  }
 }
 </script>
 

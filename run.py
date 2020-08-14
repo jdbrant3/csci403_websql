@@ -186,11 +186,11 @@ def login():
         return jsonify({'username': username, 'authorized': False}), 200
 
 
-# @app.route("/api/logout", methods=["POST"])
-# def logout():
-#     token = request.form.get("token")
-#     status = authModel.blacklist(token)
-#     return {'success': status}
+@app.route("/api/logout", methods=["POST"])
+def logout():
+    session.pop('username', None)
+    session.pop('password', None)
+    return jsonify({'success': True})
 
 
 @app.route('/', defaults={'path': ''})
