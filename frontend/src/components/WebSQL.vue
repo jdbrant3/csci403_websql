@@ -57,7 +57,7 @@
                     fixed-header
                     disable-filtering
                     disable-sort
-                    items-per-page="10"
+                    items-per-page=10
                   />
                   <p
                     v-if="result.limit_message && result.limit_message.length > 0"
@@ -76,7 +76,6 @@
   </v-container>
 </template>
 
-
 <script>
 import axios from 'axios'
 export default {
@@ -90,18 +89,18 @@ export default {
 
   mounted() {
     if (sessionStorage.getItem('query')) {
-      this.query = sessionStorage.getItem('query');
+      this.query = sessionStorage.getItem('query')
     }
     if (sessionStorage.getItem('raw_results')) {
       try {
-        this.raw_results = JSON.parse(sessionStorage.getItem('raw_results'));
+        this.raw_results = JSON.parse(sessionStorage.getItem('raw_results'))
       }
       catch(e) {
-        sessionStorage.removeItem('raw_results');
+        sessionStorage.removeItem('raw_results')
       }
     }
     if (sessionStorage.getItem('tab')) {
-      this.tab = parseInt(sessionStorage.getItem('tab'));
+      this.tab = parseInt(sessionStorage.getItem('tab'))
     }
   },
 
@@ -130,23 +129,22 @@ export default {
 
   methods: {
     execute_sql_backend: async function () {
-      const path = `http://localhost:5000/api/query`;
+      const path = `http://localhost:5000/api/query`
 
       // save the query regardless of success
-      sessionStorage.setItem('query', this.query);
+      sessionStorage.setItem('query', this.query)
       // axios.defaults.withCredentials = true
       const axiosWithCookies = axios.create({
           withCredentials: true
-        });
-        const promise = axiosWithCookies.post(path, {query: this.query})
-      // axios.post(path, {query: this.query})
+        })
+      axiosWithCookies.post(path, {query: this.query})
       .then(response => {
-        let result = response.data;
-        // console.log(result)
-        this.raw_results.push(result);
-        this.tab = this.raw_results.length - 1;
-        sessionStorage.setItem('raw_results', JSON.stringify(this.raw_results));
-        sessionStorage.setItem('tab', this.tab);
+        let result = response.data
+        console.log(result)
+        this.raw_results.push(result)
+        this.tab = this.raw_results.length - 1
+        sessionStorage.setItem('raw_results', JSON.stringify(this.raw_results))
+        sessionStorage.setItem('tab', this.tab)
       })
       .catch(error => {
         console.log(error)

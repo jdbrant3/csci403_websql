@@ -1,6 +1,6 @@
 <template>
   <v-container>
-    <v-row align="left">
+    <v-row>
       <v-col cols="3"></v-col>
       <v-col class="mb-4" cols="6">
         <v-alert v-if="error_state" type="error">
@@ -10,7 +10,7 @@
           <div class="text-h4 mb-4">Current settings for {{ current_user }}</div>
           <v-card class="mb4" width="100%">
             <v-card-title>Search path</v-card-title>
-            <v-card-text v-if="!is_editing_search_path"  align="left">
+            <v-card-text v-if="!is_editing_search_path" class="text-left">
               {{ current_search_path.join(", ") }}
             </v-card-text>
             <v-card-text v-else>
@@ -93,9 +93,11 @@ export default {
   methods: {
     async get_one_string (query) {
       const path = `http://localhost:5000/api/query`
-      let response = await axios.post(path, {query: query})
-      let rows = response.data
-      return Object.values(rows[0])[0]
+      const axiosWithCookies = axios.create({
+        withCredentials: true
+      })
+      let response = await axiosWithCookies.post(path, {query: query})
+      return response.data[0].data[0][0]
     },
 
     get_user () {
@@ -112,11 +114,14 @@ export default {
 
     start_editing_search_path () {
       const path = `http://localhost:5000/api/query`
-      axios.post(path, {query: 'select schema_name from information_schema.schemata order by schema_name'})
+      const axiosWithCookies = axios.create({
+        withCredentials: true
+      })
+      axiosWithCookies.post(path, {query: 'select schema_name from information_schema.schemata order by schema_name'})
         .then(response => {
-          let rows = response.data
+          let rows = response.data[0].data
           this.available_schemas = rows
-            .map(el => el.schema_name)
+            .map(el => el[0])
             .filter(s => !this.current_search_path.includes(s))
           this.is_editing_search_path = true
         })
@@ -130,7 +135,10 @@ export default {
     save_search_path () {
       const path = `http://localhost:5000/api/query`
       let query = 'alter user current_user set search_path to ' + this.current_search_path.join(', ')
-      axios.post(path, {query: query})
+      const axiosWithCookies = axios.create({
+        withCredentials: true
+      })
+      axiosWithCookies.post(path, {query: query})
         .then(() => {
           this.is_editing_search_path = false
         })

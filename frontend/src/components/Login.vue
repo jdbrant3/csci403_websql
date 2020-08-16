@@ -40,9 +40,9 @@
               <v-card-text>
                 <v-form
                       ref="form"
-                      v-model="isValid" 
+                      v-model="isValid"
                       lazy-validation
-                      
+
                 >
                   <v-text-field
                     label="Username"
@@ -69,8 +69,8 @@
               <v-alert v-if="this.show" type="error">Invalid username and/or password.</v-alert>
               <v-card-actions>
                 <v-spacer></v-spacer>
-                <v-btn  
-                        @click="validate" 
+                <v-btn
+                        @click="validate"
                         color="primary"
                         class="mr-4"
                         :disabled="!isValid"
@@ -114,9 +114,8 @@ export default {
         const axiosWithCookies = axios.create({
           withCredentials: true
         });
-        const promise = axiosWithCookies.post(path, {username: this.username, password: this.password})
+        axiosWithCookies.post(path, {username: this.username, password: this.password})
         .then(response => {
-          console.log(response)
           let result = response.data
           if(result.authorized){
             this.$router.push('websql')
@@ -125,12 +124,12 @@ export default {
             this.isValid = false
             this.show = true
           }
-          
-          
+
+
         })
         .catch(error => {
             console.log('Error Authenticating: ', error)
-            
+
         })
       },
       reset () {
@@ -138,8 +137,8 @@ export default {
         if(this.$refs.form) {
           this.$refs.form.reset();
         }
-        
-        
+
+
       }
     }
   }
