@@ -12,14 +12,16 @@ from flask import (
     Flask, jsonify, redirect, render_template, request, session, url_for)
 from flask_cors import CORS, cross_origin
 from psycopg2 import Error
+from do_config import config
 
 app = Flask(__name__,
             static_folder = "../dist/static",
             template_folder = "../dist")
-# cors = CORS(app, resources={r"/api/*": {"origins": "*"}})
 cors = CORS(app, resources={r"/api/*": {'origins': ['http://localhost:8080', 'http://127.0,0,1:8000']}}, headers=['Content-Type'], expose_headers=['Access-Control-Allow-Origin'], supports_credentials=True)
 
-app.secret_key = b'4sJk37OyLp-yMsrncQxKF7x_wOT1cywCCPnFCIdzp9M='
+config(app)
+
+
 
 def parse(query_string):
     # comments can occur both outside and inside queries; and semicolons can occur
@@ -86,8 +88,6 @@ def parse(query_string):
 # @cross_origin(origin='*',headers=['Content-Type','Authorization'])
 def execute_query():
     try:
-        with open('db_conn_config.json') as config_file:
-            conn_config = json.load(config_file)
 
         if 'username' not in session:
             return jsonify({'message': 'Not logged in'})
@@ -99,9 +99,9 @@ def execute_query():
 
         connection = pg.connect(user = session_username,
                                 password = session_password,
-                                host = conn_config['host'],
-                                port = conn_config['port'],
-                                database = conn_config['dbname'])
+                                host = app.config['host'],
+                                port = app.config['port'],
+                                database = app.config['dbname'])
 
         connection.autocommit = True
         cursor = connection.cursor()
@@ -163,20 +163,18 @@ def execute_query():
 
 def authorize_login(username, password):
     try:
-        with open('db_conn_config.json') as config_file:
-            conn_config = json.load(config_file)
 
         connection = pg.connect(user = username,
                                 password = password,
-                                host = conn_config['host'],
-                                port = conn_config['port'],
-                                database = conn_config['dbname'])
+                                host = app.config['host'],
+                                port = app.config['port'],
+                                database = app.config['dbname'])
         if(connection):
             return True
 
     except (Exception, pg.Error) as error :
         # app.logger.error(error)
-        print(error)
+        print("Error line 187", error)
         connection = None
         return False
 
@@ -207,7 +205,6 @@ def login():
             return jsonify({'username': username, 'authorized': True}), 200
 
     else:
-        app.logger.error("Not authorize_login")
         return jsonify({'username': username, 'authorized': False}), 200
 
 

@@ -1,0 +1,15 @@
+{
+    "app_config": {
+        "SECRET_KEY": "YOUR_SECRET_KEY"
+    },
+
+    "db_config": {
+        "dbname": "YOUR_DB_NAME",
+        "user": "DB_USERNAME",
+        "host": "YOUR_DB_HOST",
+        "password": "YOUR_DB_PASSWORD",
+        "port": "",
+        "schema": ""
+    }
+
+}
