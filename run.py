@@ -22,34 +22,62 @@ cors = CORS(app, resources={r"/api/*": {'origins': ['http://localhost:8080', 'ht
 app.secret_key = b'4sJk37OyLp-yMsrncQxKF7x_wOT1cywCCPnFCIdzp9M='
 
 def parse(query_string):
-    multiline_comment = re.compile(r'(\s*/\*.*?\*/)', flags = re.MULTILINE|re.DOTALL)
-    single_line_comment = re.compile(r'(\s*--.*$)', flags = re.MULTILINE)
-
-    # let ; terminate each query (assume comments go only with following queries)
-    queries = query_string.split(';')
-
+    # comments can occur both outside and inside queries; and semicolons can occur
+    # inside comments.  This makes parsing tricky, if we want to retain comments
+    # (relatively easy to just strip out all comments).
+    multiline_comment = re.compile(r'(/\*.*?\*/)', flags = re.MULTILINE|re.DOTALL)
+    single_line_comment = re.compile(r'(--.*$)', flags= re.MULTILINE)
     result = []
 
-    for q in queries:
-        comment = ''
-        while True:
+    current_comment = ''
 
-            match = multiline_comment.match(q)
-            if match:
-                comment = comment + match.group(0)
-                q = q[match.end():]
-                continue
-
-            match = single_line_comment.match(q)
-            if match:
-                comment = comment + match.group(0)
-                q = q[match.end():]
-                continue
-
-            # if we found no leading comments, assume the rest is query
+    while True:
+        query_string = query_string.strip()
+        if len(query_string) == 0:
             break
 
-        result.append((q.strip(), comment.strip()))
+        # what comes first?
+        match = multiline_comment.match(query_string)
+        if match:
+            current_comment = current_comment + match.group(0) + '\n'
+            query_string = query_string[(match.end()+1):]
+            continue
+
+        match = single_line_comment.match(query_string)
+        if match:
+            current_comment = current_comment + match.group(0) + '\n'
+            query_string = query_string[(match.end()+1):]
+            continue
+
+        # else assume must be a query; however, we can't simply
+        # search for a semicolon, because there could be a comment
+        # embedded with a semicolon in it.  Find the first semicolon
+        # not inside a comment.
+        current_pos = 0
+        while True:
+            semi = query_string.find(';', current_pos)
+            if semi == -1:
+                semi = len(query_string)
+            match = multiline_comment.search(query_string, current_pos)
+            match2 = single_line_comment.search(query_string, current_pos)
+
+            if match:
+                if match2 and match2.start() < match.start():
+                    match = match2
+            else:
+                match = match2
+
+            if match and match.start() < semi and match.end() > semi:
+                # comment enclosing, must look further
+                current_pos = match.end() + 1
+                continue
+
+            # else, current semicolon is the end of this query
+            current_query = query_string[0:semi]
+            result.append((current_query, current_comment.strip()))
+            query_string = query_string[(semi+1):]
+            current_comment = ''
+            break
 
     return result
 
@@ -78,7 +106,6 @@ def execute_query():
         connection.autocommit = True
         cursor = connection.cursor()
 
-    
         queries = parse(request.json['query'])
         results = []
 
@@ -134,12 +161,10 @@ def execute_query():
         return jsonify({ 'message': 'Connection Failed' }), 401
 
 
-
 def authorize_login(username, password):
     try:
         with open('db_conn_config.json') as config_file:
             conn_config = json.load(config_file)
-
 
         connection = pg.connect(user = username,
                                 password = password,
