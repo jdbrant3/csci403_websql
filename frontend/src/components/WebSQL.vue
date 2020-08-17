@@ -57,7 +57,6 @@
                     fixed-header
                     disable-filtering
                     disable-sort
-                    items-per-page=10
                   />
                   <p
                     v-if="result.limit_message && result.limit_message.length > 0"
@@ -140,7 +139,6 @@ export default {
       axiosWithCookies.post(path, {query: this.query})
       .then(response => {
         let result = response.data
-        console.log(result)
         this.raw_results.push(result)
         this.tab = this.raw_results.length - 1
         sessionStorage.setItem('raw_results', JSON.stringify(this.raw_results))
