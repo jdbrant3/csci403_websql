@@ -192,6 +192,13 @@ def logout():
     session.pop('password', None)
     return jsonify({'success': True})
 
+@app.route("/api/is_logged_in")
+def is_logged_in():
+    if 'username' in session:
+        return jsonify({ 'loggedIn': True })
+    else:
+        return jsonify({ 'loggedIn': False })
+
 
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')

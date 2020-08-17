@@ -6,22 +6,22 @@
       dark
     >
       <div class="d-flex align-center">
-        <span>
+        <span class="text-subtitle-1">
           CSCI 403 Web SQL Interface
         </span>
       </div>
-
       <v-spacer></v-spacer>
-
       <v-btn
         to="/websql"
         text
+        :disabled="!loggedIn"
       >
         <span class="mr-2">SQL</span>
       </v-btn>
       <v-btn
         to="/settings"
         text
+        :disabled="!loggedIn"
       >
         <span class="mr-2">Settings</span>
       </v-btn>
@@ -29,6 +29,7 @@
         href=""
         text
         @click="logout"
+        :disabled="!loggedIn"
       >
         <span class="mr-2">Logout</span>
       </v-btn>
@@ -57,8 +58,19 @@ export default {
     NotFound
   },
   data: () => ({
-    //
+    loggedIn: false
   }),
+
+  updated () {
+    const path = `http://localhost:5000/api/is_logged_in`
+    const axiosWithCookies = axios.create({
+      withCredentials: true
+    })
+    axiosWithCookies.get(path)
+    .then(response => {
+      this.loggedIn = response.data.loggedIn
+    })
+  },
   methods: {
     logout () {
       const path = `http://localhost:5000/api/logout`
@@ -66,15 +78,15 @@ export default {
         withCredentials: true
       })
       axiosWithCookies.post(path)
-        .then(response => {
-          let result = response.data
-          if (result.success) {
-            this.$router.push('login')
-          }
-        })
-        .catch(error => {
-          console.log('Error Logging Out: ', error)
-        })
+      .then(response => {
+        let result = response.data
+        if (result.success) {
+          this.$router.push('login')
+        }
+      })
+      .catch(error => {
+        console.log('Error Logging Out: ', error)
+      })
     }
   }
 }

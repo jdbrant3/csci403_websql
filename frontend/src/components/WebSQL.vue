@@ -87,19 +87,21 @@ export default {
   }),
 
   mounted() {
-    if (sessionStorage.getItem('query')) {
-      this.query = sessionStorage.getItem('query')
+    if (sessionStorage.getItem('csci403_query')) {
+      this.query = sessionStorage.getItem('csci403_query')
     }
-    if (sessionStorage.getItem('raw_results')) {
+    if (sessionStorage.getItem('csci403_raw_results')) {
       try {
-        this.raw_results = JSON.parse(sessionStorage.getItem('raw_results'))
+        this.raw_results = JSON.parse(sessionStorage.getItem('csci403_raw_results'))
       }
       catch(e) {
-        sessionStorage.removeItem('raw_results')
+        sessionStorage.removeItem('csci403_raw_results')
+        sessionStorage.removeItem('csci403_tab')
+
       }
     }
-    if (sessionStorage.getItem('tab')) {
-      this.tab = parseInt(sessionStorage.getItem('tab'))
+    if (sessionStorage.getItem('csci403_tab')) {
+      this.tab = parseInt(sessionStorage.getItem('csci403_tab'))
     }
   },
 
@@ -131,7 +133,7 @@ export default {
       const path = `http://localhost:5000/api/query`
 
       // save the query regardless of success
-      sessionStorage.setItem('query', this.query)
+      sessionStorage.setItem('csci403_query', this.query)
       // axios.defaults.withCredentials = true
       const axiosWithCookies = axios.create({
           withCredentials: true
@@ -141,8 +143,8 @@ export default {
         let result = response.data
         this.raw_results.push(result)
         this.tab = this.raw_results.length - 1
-        sessionStorage.setItem('raw_results', JSON.stringify(this.raw_results))
-        sessionStorage.setItem('tab', this.tab)
+        sessionStorage.setItem('csci403_raw_results', JSON.stringify(this.raw_results))
+        sessionStorage.setItem('csci403_tab', this.tab)
       })
       .catch(error => {
         console.log(error)
