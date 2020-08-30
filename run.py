@@ -14,13 +14,20 @@ from flask_cors import CORS, cross_origin
 from psycopg2 import Error
 from do_config import config
 
+from pgspecial.main import PGSpecial
+from pgspecial.namedqueries import NamedQueries
+
 app = Flask(__name__,
             static_folder = "../dist/static",
             template_folder = "../dist")
+
+# Define origins of api requests to enable Cross Origin Request Sharing for session object across api requests
 cors = CORS(app, resources={r"/api/*": {'origins': ['http://localhost:8080', 'http://127.0,0,1:8000']}}, headers=['Content-Type'], expose_headers=['Access-Control-Allow-Origin'], supports_credentials=True)
 
+# Load app and database settings from config file
 config(app)
 
+pgspecial = PGSpecial()
 
 
 def parse(query_string):
@@ -85,7 +92,6 @@ def parse(query_string):
 
 
 @app.route('/api/query', methods=['POST'])
-# @cross_origin(origin='*',headers=['Content-Type','Authorization'])
 def execute_query():
     try:
 
@@ -157,42 +163,98 @@ def execute_query():
 
     except (Exception, pg.Error) as error :
         app.logger.exception(error)
-        # connection = None
         return jsonify({ 'message': 'Connection Failed' }), 401
 
 
-def authorize_login(username, password):
+@app.route('/api/describe', methods=['GET'])
+def describe():
     try:
 
+        if 'username' not in session:
+            return jsonify({'message': 'Not logged in'}), 400
+
+        else:
+            session_username = session['username']
+            f = Fernet(app.secret_key)
+            session_password = f.decrypt(session['password']).decode('utf-8')
+
+        connection = pg.connect(user = session_username,
+                                password = session_password,
+                                host = app.config['host'],
+                                port = app.config['port'],
+                                database = app.config['dbname'])
+
+        connection.autocommit = True
+        cursor = connection.cursor()
+
+        for result in pgspecial.execute(cursor, "\d"):
+            header = result[2]
+        data = cursor.fetchall()
+        data.insert(0, header)
+        return json.dumps(data)
+        
+    except (Exception, pg.Error) as error :
+        app.logger.exception(error)
+        return jsonify({ 'message': 'Connection Failed' }), 401
+
+
+@app.route('/api/describe_object', methods=['POST', 'GET'])
+def describe_object():
+    try:
+        # if 'username' not in session:
+        #     return jsonify({'message': 'Not logged in'}), 400
+
+        # else:
+        session_username = session['username']
+        f = Fernet(app.secret_key)
+        session_password = f.decrypt(session['password']).decode('utf-8')
+
+        connection = pg.connect(user = session_username,
+                                password = session_password,
+                                host = app.config['host'],
+                                port = app.config['port'],
+                                database = app.config['dbname'])
+
+        connection.autocommit = True
+        cursor = connection.cursor()
+
+        for result in pgspecial.execute(cursor, "\dt"):
+            header = result[2]
+        data = cursor.fetchall()
+        data.insert(0, header)
+        return json.dumps(data)
+        
+    except (Exception, pg.Error) as error :
+        app.logger.exception(error)
+        return jsonify({ 'message': 'Connection Failed' }), 401
+
+# If connecting to database is successful then credentials are authenticated
+def authorize_login(username, password):
+    try:
         connection = pg.connect(user = username,
                                 password = password,
                                 host = app.config['host'],
                                 port = app.config['port'],
                                 database = app.config['dbname'])
         if(connection):
+            connection = None
             return True
 
     except (Exception, pg.Error) as error :
-        # app.logger.error(error)
-        print("Error line 187", error)
+        app.logger.error(error)
         connection = None
         return False
 
 
 @app.route('/api/login', methods=['POST'])
-# @cross_origin(origin='*',headers=['Content-Type','Authorization'])
 def login():
 
     username = request.json['username'].strip()
     password = request.json['password'].strip()
 
-    if not username:
-        return jsonify({"message": "Missing username parameter"}), 400
-    if not password:
-        return jsonify({"message": "Missing password parameter"}), 400
-
     if authorize_login(username, password):
-
+        
+        # if user is not logged in already then create new session for user
         if username not in session:
             byte_pass = password.encode()
             f = Fernet(app.secret_key)
@@ -203,11 +265,11 @@ def login():
             return jsonify({'username': username, 'authorized': True}), 200
         else:
             return jsonify({'username': username, 'authorized': True}), 200
-
+    # If user not authenticated then return a flase authorization
     else:
         return jsonify({'username': username, 'authorized': False}), 200
 
-
+# Remove user credentials from session object
 @app.route("/api/logout", methods=["POST"])
 def logout():
     session.pop('username', None)
