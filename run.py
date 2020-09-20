@@ -180,8 +180,7 @@ def describe():
         for result in pgspecial.execute(cursor, "\d"):
             header = result[2]
         data = cursor.fetchall()
-        # data.insert(0, header)
-        # results1.append({ 'data' : data , 'columns' : header})
+
         results.append({ 'data': data, 'columns': header })
 
         cursor.close()
@@ -204,11 +203,17 @@ def describe_object():
         connection = fetch_connection(session_username, session_password)
         cursor = connection.cursor()
 
+        results = []
+
         for result in pgspecial.execute(cursor, "\dt"):
             header = result[2]
         data = cursor.fetchall()
-        data.insert(0, header)
-        return json.dumps(data)
+
+        results.append({ 'data': data, 'columns': header })
+
+        cursor.close()
+        connection.close()
+        return json.dumps(results)
         
     except (Exception, pg.Error) as error :
         app.logger.exception(error)

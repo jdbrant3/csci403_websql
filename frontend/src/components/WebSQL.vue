@@ -112,10 +112,8 @@
                           :items=describe_output
                           />
                         <v-divider></v-divider>
-                        <!-- <v-alert>{{ describe_object_output }}</v-alert> -->
-                          <!-- <v-data-table
-                            items = describe_object_output
-                          /> -->
+                        <v-alert>{{ describe_object_output }}</v-alert>
+
                       </v-expansion-panels>
                     </v-card>
                   </v-col>
@@ -143,7 +141,8 @@ export default {
     runs: [],
     tab: null,
     schemaShowing: false,
-    selectedSchemas: []
+    selectedSchemas: [],
+    describe_object_output: ''
   }),
 
   mounted() {
