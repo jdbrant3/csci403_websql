@@ -1,15 +1,15 @@
 {
     "app_config": {
-        "SECRET_KEY": "YOUR_SECRET_KEY"
+        "SECRET_KEY": "4sJk37OyLp-yMsrncQxKF7x_wOT1cywCCPnFCIdzp9M="
     },
 
     "db_config": {
-        "dbname": "YOUR_DB_NAME",
-        "user": "DB_USERNAME",
-        "host": "YOUR_DB_HOST",
-        "password": "YOUR_DB_PASSWORD",
-        "port": "",
-        "schema": ""
+        "dbname": "coursedev",
+        "user": "jdbrant",
+        "host": "flowers.mines.edu",
+        "password": "jimmy123",
+        "port": "5433",
+        "schema": "coursedev"
     }
 
 }

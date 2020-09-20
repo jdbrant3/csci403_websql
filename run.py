@@ -103,17 +103,11 @@ def execute_query():
             f = Fernet(app.secret_key)
             session_password = f.decrypt(session['password']).decode('utf-8')
 
-        connection = pg.connect(user = session_username,
-                                password = session_password,
-                                host = app.config['host'],
-                                port = app.config['port'],
-                                database = app.config['dbname'])
+            connection = fetch_connection(session_username, session_password)
+            cursor = connection.cursor()
 
-        connection.autocommit = True
-        cursor = connection.cursor()
-
-        queries = parse(request.json['query'])
-        results = []
+            queries = parse(request.json['query'])
+            results = []
 
         for (query, comment) in queries:
             if query == '':
@@ -178,14 +172,8 @@ def describe():
             f = Fernet(app.secret_key)
             session_password = f.decrypt(session['password']).decode('utf-8')
 
-        connection = pg.connect(user = session_username,
-                                password = session_password,
-                                host = app.config['host'],
-                                port = app.config['port'],
-                                database = app.config['dbname'])
-
-        connection.autocommit = True
-        cursor = connection.cursor()
+            connection = fetch_connection(session_username, session_password)
+            cursor = connection.cursor()
 
         for result in pgspecial.execute(cursor, "\d"):
             header = result[2]
@@ -201,21 +189,12 @@ def describe():
 @app.route('/api/describe_object', methods=['POST', 'GET'])
 def describe_object():
     try:
-        # if 'username' not in session:
-        #     return jsonify({'message': 'Not logged in'}), 400
 
-        # else:
         session_username = session['username']
         f = Fernet(app.secret_key)
         session_password = f.decrypt(session['password']).decode('utf-8')
 
-        connection = pg.connect(user = session_username,
-                                password = session_password,
-                                host = app.config['host'],
-                                port = app.config['port'],
-                                database = app.config['dbname'])
-
-        connection.autocommit = True
+        connection = fetch_connection(session_username, session_password)
         cursor = connection.cursor()
 
         for result in pgspecial.execute(cursor, "\dt"):
@@ -227,23 +206,6 @@ def describe_object():
     except (Exception, pg.Error) as error :
         app.logger.exception(error)
         return jsonify({ 'message': 'Connection Failed' }), 401
-
-# If connecting to database is successful then credentials are authenticated
-def authorize_login(username, password):
-    try:
-        connection = pg.connect(user = username,
-                                password = password,
-                                host = app.config['host'],
-                                port = app.config['port'],
-                                database = app.config['dbname'])
-        if(connection):
-            connection = None
-            return True
-
-    except (Exception, pg.Error) as error :
-        app.logger.error(error)
-        connection = None
-        return False
 
 
 @app.route('/api/login', methods=['POST'])
@@ -275,6 +237,33 @@ def logout():
     session.pop('username', None)
     session.pop('password', None)
     return jsonify({'success': True})
+
+
+# If connecting to database is successful then credentials are authenticated
+def authorize_login(username, password):
+
+    connection = fetch_connection(username, password)
+    if connection:
+        connection = None
+        return True
+    else:
+        return False
+
+
+def fetch_connection(username, password):
+    try:
+        connection = pg.connect(user = username,
+                                password = password,
+                                host = app.config['host'],
+                                port = app.config['port'],
+                                database = app.config['dbname'])
+
+        connection.autocommit = True
+        return connection
+    except (Exception, pg.error) as error:
+        app.logger.error(error)
+        return None
+
 
 @app.route("/api/is_logged_in")
 def is_logged_in():
