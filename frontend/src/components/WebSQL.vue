@@ -106,9 +106,16 @@
                     <p>(Click on SETTINGS in menu above to change active schemas)</p>
                     <v-card>
                       <v-expansion-panels flat hover multiple v-model="selectedSchemas">
-                        <v-alert>{{ describe_output }}</v-alert>
                         <v-divider></v-divider>
-                        <v-alert>{{ describe_object_output }}</v-alert>
+                          <v-data-table
+                          v-if=describe_output.data
+                          :items=describe_output
+                          />
+                        <v-divider></v-divider>
+                        <!-- <v-alert>{{ describe_object_output }}</v-alert> -->
+                          <!-- <v-data-table
+                            items = describe_object_output
+                          /> -->
                       </v-expansion-panels>
                     </v-card>
                   </v-col>
@@ -136,9 +143,7 @@ export default {
     runs: [],
     tab: null,
     schemaShowing: false,
-    selectedSchemas: [],
-    describe_output: "",
-    describe_object_output: ""
+    selectedSchemas: []
   }),
 
   mounted() {
@@ -217,7 +222,22 @@ export default {
       })
       axiosWithCookies.get(path)
         .then(response => {
-          this.describe_output = response.data
+        let describe_output = response.data.map(r => {
+          if ('data' in r) {
+            r.data = r.data.map(row => {
+              let conversion = {}
+              for (let index = 0; index < row.length; index++) {
+                conversion[r.columns[index]] = row[index]
+              }
+              return conversion
+            })
+          }
+          if ('columns' in r) {
+            r.columns = r.columns.map(el => ({ text: el, value: el }))
+          }
+          return r;
+        })
+        console.log(describe_output)
         })
         .catch(error => {
           console.log(error)
