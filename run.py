@@ -10,6 +10,7 @@ from flask import (
     Flask, jsonify, redirect, render_template, request, session, url_for)
 from flask_cors import CORS, cross_origin
 from do_config import config
+from functools import wraps
 
 app = Flask(__name__,
             static_folder = "../dist/static",
@@ -23,164 +24,10 @@ config(app)
 
 pgspecial = PGSpecial()
 
-# execute a SQL query and return the results
-@app.route('/api/query', methods=['POST'])
-def execute_query():
-    cursor, fail_message, fail_code = fetch_cursor()
-    if cursor:
-        results = []
-        queries = parse(request.json['query'])
 
-        for (query, comment) in queries:
-            if query == '':
-                if len(comment) > 0:
-                    results.append({ 'comment' : comment })
-            elif query.lower()[0:5] == 'show ' or query.lower()[0:7] == 'select ':
-                query = query + ';'
-                try:
-                    cursor.execute(query)
-                    rowcount = cursor.rowcount
-
-                    # should make this a settable limit on the client side at some point
-                    limit_message = ''
-                    if (rowcount > 500):
-                        data = cursor.fetchmany(500)
-                        limit_message = 'Query resulted in ' + str(rowcount) + ' rows, exceeding limit.  First 500 rows displayed above.'
-                    else:
-                        data = cursor.fetchall()
-
-                    # convert to strings, not all types convert to JSON
-                    data = [ [ str(item or '<null>') for item in row ] for row in data ]
-
-                    columns = [ el[0] for el in cursor.description ]
-
-                    results.append({ 'query' : query,
-                                     'comment' : comment,
-                                     'data' : data ,
-                                     'columns' : columns,
-                                     'limit_message' : limit_message
-                                     })
-                except pg.Error as e:
-                    results.append({ 'query' : query, 'comment' : comment, 'error' : str(e) })
-                    break
-            else:
-                query = query + ';'
-                try:
-                    cursor.execute(query)
-                    rowcount = cursor.rowcount
-                    results.append({ 'query' : query, 'comment' : comment, 'message' : cursor.statusmessage })
-                except pg.Error as e:
-                    results.append({ 'query' : query, 'comment' : comment, 'error' : str(e) })
-                    break
-
-        cursor.close()
-        cursor.connection.close()
-        return json.dumps(results)
-
-    else:
-        app.logger.exception(fail_message)
-        return jsonify({ 'message': fail_message }), fail_code
-
-# Implements \d
-@app.route('/api/describe', methods=['GET'])
-def describe():
-    cursor, fail_message, fail_code = fetch_cursor()
-    if cursor:
-        results = []
-
-        for result in pgspecial.execute(cursor, "\d"):
-            header = result[2]
-        data = cursor.fetchall()
-
-        results.append({ 'data': data, 'columns': header })
-
-        cursor.close()
-        cursor.connection.close()
-        return json.dumps(results)
-
-    else:
-        app.logger.exception(fail_message)
-        return jsonify({ 'message': fail_message }), fail_code
-
-# Implements \d object or \d+ object
-@app.route('/api/describe_object', methods=['POST'])
-def describe_object():
-    cursor, fail_message, fail_code = fetch_cursor()
-    if cursor:
-        results = []
-
-        for result in pgspecial.execute(cursor, "\dt"):
-            header = result[2]
-        data = cursor.fetchall()
-
-        results.append({ 'data': data, 'columns': header })
-
-        cursor.close()
-        cursor.connection.close()
-
-        return json.dumps(results)
-        
-    else:
-        app.logger.exception(fail_message)
-        return jsonify({ 'message': fail_message }), fail_code
-
-# route for user login
-@app.route('/api/login', methods=['POST'])
-def login():
-
-    username = request.json['username'].strip()
-    password = request.json['password'].strip()
-
-    if authorize_login(username, password):
-        
-        # if user is not logged in already then create new session for user
-        if username not in session:
-            byte_pass = password.encode()
-            f = Fernet(app.secret_key)
-            encrypt_pass = f.encrypt(byte_pass)
-            session['username'] = username
-            session['password'] = encrypt_pass
-
-            return jsonify({'username': username, 'authorized': True}), 200
-        else:
-            return jsonify({'username': username, 'authorized': True}), 200
-    # If user not authenticated then return a flask authorization
-    else:
-        return jsonify({'username': username, 'authorized': False}), 200
-
-
-# Remove user credentials from session object
-@app.route("/api/logout", methods=["POST"])
-def logout():
-    session.pop('username', None)
-    session.pop('password', None)
-    return jsonify({'success': True})
-
-# test for existence of user credentials
-@app.route("/api/is_logged_in")
-def is_logged_in():
-    if 'username' in session:
-        return jsonify({ 'loggedIn': True })
-    else:
-        return jsonify({ 'loggedIn': False })
-
-# default route returns static index.html
-@app.route('/', defaults={'path': ''})
-@app.route('/<path:path>')
-def catch_all(path):
-    if app.debug:
-        return requests.get('http://localhost:8080/{}'.format(path)).text
-    return render_template("index.html")
-
-
-# If connecting to database is successful then credentials are authenticated
-def authorize_login(username, password):
-    connection = fetch_connection(username, password)
-    if connection:
-        connection = None
-        return True
-    else:
-        return False
+#####################
+# Utility functions #
+#####################
 
 # Get a database connection for a given username and password
 def fetch_connection(username, password):
@@ -197,23 +44,45 @@ def fetch_connection(username, password):
         app.logger.error(error)
         return None
 
-# Connect to the database and obtain a database cursor, using the credentials
-# of the currently logged in user
-def fetch_cursor():
-    try:
-        if 'username' not in session:
-            return None, 'Not logged in', 401
-        else:
-            session_username = session['username']
-            f = Fernet(app.secret_key)
-            session_password = f.decrypt(session['password']).decode('utf-8')
 
-            connection = fetch_connection(session_username, session_password)
-            cursor = connection.cursor()
-            return cursor, None, None
-    except (Exception, pg.Error) as error :
-        app.logger.exception(error)
-        return None, 'Connection failed', 401
+# Connect to the database and obtain a database cursor, using the credentials
+# of the currently logged in user, execute the wrapped route, and return the
+# result.  If there is an error, return the appropriate error
+def use_cursor_wrapper(fn):
+    @wraps(fn)
+    def decorate():
+        try:
+            if 'username' not in session:
+                return jsonify({ 'error': 'Not logged in' }), 401
+            else:
+                session_username = session['username']
+                f = Fernet(app.secret_key)
+                session_password = f.decrypt(session['password']).decode('utf-8')
+                connection = fetch_connection(session_username, session_password)
+                cursor = connection.cursor()
+
+                result = fn(cursor)
+
+                cursor.close()
+                connection.close()
+
+                return result
+
+        except (Exception, pg.Error) as error :
+            app.logger.exception(error)
+            return jsonify({ 'error': 'Connection failed' }), 401
+    return decorate
+
+
+# If connecting to database is successful then credentials are authenticated
+def authorize_login(username, password):
+    connection = fetch_connection(username, password)
+    if connection:
+        connection = None
+        return True
+    else:
+        return False
+
 
 # Parse query string, separating out individual SQL statements, and comments where
 # possible.
@@ -276,3 +145,146 @@ def parse(query_string):
             break
 
     return result
+
+
+##########
+# Routes #
+##########
+
+# execute a SQL query and return the results
+@app.route('/api/query', methods=['POST'])
+@use_cursor_wrapper
+def execute_query(cursor):
+    results = []
+    queries = parse(request.json['query'])
+
+    for (query, comment) in queries:
+        if query == '':
+            if len(comment) > 0:
+                results.append({ 'comment' : comment })
+        elif query.lower()[0:5] == 'show ' or query.lower()[0:7] == 'select ':
+            query = query + ';'
+            try:
+                cursor.execute(query)
+                rowcount = cursor.rowcount
+
+                # should make this a settable limit on the client side at some point
+                limit_message = ''
+                if (rowcount > 500):
+                    data = cursor.fetchmany(500)
+                    limit_message = 'Query resulted in ' + str(rowcount) + ' rows, exceeding limit.  First 500 rows displayed above.'
+                else:
+                    data = cursor.fetchall()
+
+                # convert to strings, not all types convert to JSON
+                data = [ [ str(item or '<null>') for item in row ] for row in data ]
+
+                columns = [ el[0] for el in cursor.description ]
+
+                results.append({ 'query' : query,
+                                 'comment' : comment,
+                                 'data' : data ,
+                                 'columns' : columns,
+                                 'limit_message' : limit_message
+                                 })
+            except pg.Error as e:
+                results.append({ 'query' : query, 'comment' : comment, 'error' : str(e) })
+                break
+        else:
+            query = query + ';'
+            try:
+                cursor.execute(query)
+                rowcount = cursor.rowcount
+                results.append({ 'query' : query, 'comment' : comment, 'message' : cursor.statusmessage })
+            except pg.Error as e:
+                results.append({ 'query' : query, 'comment' : comment, 'error' : str(e) })
+                break
+
+    return json.dumps(results)
+
+
+# Implements \d
+@app.route('/api/describe', methods=['GET'])
+@use_cursor_wrapper
+def describe(cursor):
+    results = []
+
+    for result in pgspecial.execute(cursor, "\d"):
+        header = result[2]
+    data = cursor.fetchall()
+
+    results.append({ 'data': data, 'columns': header })
+
+    cursor.close()
+    cursor.connection.close()
+    return json.dumps(results)
+
+
+# Implements \d object or \d+ object
+@app.route('/api/describe_object', methods=['POST'])
+@use_cursor_wrapper
+def describe_object(cursor):
+    results = []
+
+    for result in pgspecial.execute(cursor, "\dt"):
+        header = result[2]
+    data = cursor.fetchall()
+
+    results.append({ 'data': data, 'columns': header })
+
+    cursor.close()
+    cursor.connection.close()
+
+    return json.dumps(results)
+
+
+# route for user login
+@app.route('/api/login', methods=['POST'])
+def login():
+
+    username = request.json['username'].strip()
+    password = request.json['password'].strip()
+
+    if authorize_login(username, password):
+        
+        # if user is not logged in already then create new session for user
+        if username not in session:
+            byte_pass = password.encode()
+            f = Fernet(app.secret_key)
+            encrypt_pass = f.encrypt(byte_pass)
+            session['username'] = username
+            session['password'] = encrypt_pass
+
+            return jsonify({'username': username, 'authorized': True}), 200
+        else:
+            return jsonify({'username': username, 'authorized': True}), 200
+    # If user not authenticated then return a flask authorization
+    else:
+        return jsonify({'username': username, 'authorized': False}), 200
+
+
+# Remove user credentials from session object
+@app.route("/api/logout", methods=["POST"])
+def logout():
+    session.pop('username', None)
+    session.pop('password', None)
+    return jsonify({'success': True})
+
+
+# test for existence of user credentials
+@app.route("/api/is_logged_in")
+def is_logged_in():
+    if 'username' in session:
+        return jsonify({ 'loggedIn': True })
+    else:
+        return jsonify({ 'loggedIn': False })
+
+
+# default route returns static index.html
+@app.route('/', defaults={'path': ''})
+@app.route('/<path:path>')
+def catch_all(path):
+    if app.debug:
+        return requests.get('http://localhost:8080/{}'.format(path)).text
+    return render_template("index.html")
+
