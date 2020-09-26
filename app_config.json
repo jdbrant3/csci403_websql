@@ -4,12 +4,12 @@
     },
 
     "db_config": {
-        "dbname": "coursedev",
-        "user": "jdbrant",
-        "host": "flowers.mines.edu",
-        "password": "jimmy123",
-        "port": "5433",
-        "schema": "coursedev"
+        "dbname": "csci403",
+        "user": "DB_USERNAME",
+        "host": "bartik.mines.edu",
+        "password": "YOUR_DB_PASSWORD",
+        "port": "",
+        "schema": ""
     }
 
 }
