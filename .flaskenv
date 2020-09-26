@@ -1,4 +1,3 @@
 FLASK_APP=run.py
 FLASK_ENV=development
 FLASK_DEBUG=1
-SECRET_KEY=b'4sJk37OyLp-yMsrncQxKF7x_wOT1cywCCPnFCIdzp9M='
