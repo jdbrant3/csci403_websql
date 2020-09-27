@@ -1,7 +1,7 @@
 <template>
   <v-container>
     <v-row>
-      <v-col :cols="schemaShowing ? 7 : 11">
+      <v-col :cols="schema_showing ? 7 : 11">
         <v-container>
           <v-row class="text-center">
             <v-col class="mb-4">
@@ -89,31 +89,58 @@
           </v-row>
         </v-container>
       </v-col>
-      <v-col :cols="schemaShowing ? 5 : 1">
+      <v-col :cols="schema_showing ? 5 : 1">
         <v-container class="mx-4">
           <v-row class="text-center">
-            <v-col :cols="schemaShowing ? 1 : 6" class="d-flex align-center">
-              <v-btn icon large @click="schemaShowing = !schemaShowing">
-                <v-icon v-if="schemaShowing">mdi-chevron-right</v-icon>
+            <v-col :cols="schema_showing ? 1 : 6" class="d-flex align-center">
+              <v-btn icon large @click="toggle_schema">
+                <v-icon v-if="schema_showing">mdi-chevron-right</v-icon>
                 <v-icon v-else>mdi-chevron-left</v-icon>
               </v-btn>
             </v-col>
-            <v-col v-if="schemaShowing" cols="11">
+            <v-col v-if="schema_showing" cols="11">
               <v-container>
                 <v-row class="text-left">
                   <v-col>
-                    <h4>Your schemas</h4>
+                    <h4>Your schemas: </h4>
                     <p>(Click on SETTINGS in menu above to change active schemas)</p>
                     <v-card>
-                      <v-expansion-panels flat hover multiple v-model="selectedSchemas">
-                        <v-divider></v-divider>
-                          <v-data-table
-                          v-if=describe_output.data
-                          :items=describe_output
-                          />
-                        <v-divider></v-divider>
-                        <v-alert>{{ describe_object_output }}</v-alert>
-
+                      <v-expansion-panels hover multiple v-model="selected_schemas" class="pa-2">
+                        <v-expansion-panel v-for="schema in schemas" :key="schema.name" >
+                          <v-expansion-panel-header>{{ schema.name }}</v-expansion-panel-header>
+                          <v-expansion-panel-content>
+                            <v-expansion-panels hover multiple v-model="selected_schema_objects[schema.name]">
+                              <v-expansion-panel
+                                v-for="obj in schema.objects"
+                                :key="schema.name + '.' + obj.name"
+                                @click="get_object_info(schema.name, obj.name, obj.type)"
+                              >
+                                <v-expansion-panel-header>{{ obj.name }}</v-expansion-panel-header>
+                                <v-expansion-panel-content>
+                                  <div class="mb-4">
+                                    <b>type: </b> {{ obj.type }}
+                                    <b>owner: </b> {{ obj.owner }}
+                                  </div>
+                                  <v-card v-if="obj.details.columns">
+                                    <v-simple-table class="pa-3">
+                                      <thead>
+                                        <tr>
+                                          <th v-for="col in obj.details.columns">{{ col }}</th>
+                                        </tr>
+                                      </thead>
+                                      <tbody>
+                                        <tr v-for="row in obj.details.data">
+                                          <td v-for="val in row">{{ val }}</td>
+                                        </tr>
+                                      </tbody>
+                                    </v-simple-table>
+                                  </v-card>
+                                  <pre v-if="obj.details.info" class="mt-4 body-2">{{ obj.details.info }}</pre>
+                                </v-expansion-panel-content>
+                              </v-expansion-panel>
+                            </v-expansion-panels>
+                          </v-expansion-panel-content>
+                        </v-expansion-panel>
                       </v-expansion-panels>
                     </v-card>
                   </v-col>
@@ -140,9 +167,12 @@ export default {
     run_number: 0,
     runs: [],
     tab: null,
-    schemaShowing: false,
-    selectedSchemas: [],
-    describe_object_output: ''
+    schema_showing: false,
+    selected_schemas: [],
+    selected_schema_objects: {},
+    schemas: [],
+    schema_objects: {},
+    search_path: ''
   }),
 
   mounted() {
@@ -163,8 +193,6 @@ export default {
     if (sessionStorage.getItem('csci403_tab')) {
       this.tab = parseInt(sessionStorage.getItem('csci403_tab'))
     }
-    this.get_describe()
-    this.get_describe_obj('pioneers_people')
   },
 
   methods: {
@@ -214,51 +242,81 @@ export default {
       sessionStorage.setItem('csci403_tab', this.tab)
     },
 
-    get_describe: function() {
-      const path = `http://localhost:5000/api/describe`
-      const axiosWithCookies = axios.create({
-        withCredentials: true
-      })
-      axiosWithCookies.get(path)
-        .then(response => {
-        let describe_output = response.data.map(r => {
-          if ('data' in r) {
-            r.data = r.data.map(row => {
-              let conversion = {}
-              for (let index = 0; index < row.length; index++) {
-                conversion[r.columns[index]] = row[index]
-              }
-              return conversion
-            })
-          }
-          if ('columns' in r) {
-            r.columns = r.columns.map(el => ({ text: el, value: el }))
-          }
-          return r;
-        })
-        console.log(describe_output)
-        })
-        .catch(error => {
-          console.log(error)
-          this.describe_output = error.toString()
-        })
+    toggle_schema() {
+      this.schema_showing = !this.schema_showing
+      this.selected_schemas = []
+      if (this.schema_showing) {
+        this.refresh_schemas()
+      }
     },
 
-    get_describe_obj: function(name) {
+    async refresh_schemas () {
+      let search_path = await this.get_search_path()
+      const path = `http://localhost:5000/api/describe`
+      const axiosWithCookies = axios.create({ withCredentials: true })
+      let response = await axiosWithCookies.post(path, { show_extra: false })
+      for (let i = 0; i < search_path.length; i++) {
+        this.selected_schema_objects[search_path[i]] = []
+      }
+      this.schemas = search_path.map(schema => ({
+          name: schema,
+          objects: response.data.data.filter(obj => {
+              return obj[0] === schema
+            }).map(obj => ({
+              name: obj[1],
+              type: obj[2],
+              owner: obj[3],
+              details: {}
+            }))
+          })
+        )
+    },
+
+    async get_object_info (schema_name, object_name, object_type) {
       const path = `http://localhost:5000/api/describe_object`
+      const axiosWithCookies = axios.create({ withCredentials: true })
+      let response = await axiosWithCookies.post(
+        path, { name: schema_name + '.' + object_name, show_extra: object_type === 'view' }
+      )
+      this.schemas = this.schemas.map(schema => {
+        if (schema.name === schema_name) {
+          return {
+            name: schema.name,
+            objects: schema.objects.map(obj => {
+              if (obj.name === object_name) {
+                return {
+                  name: obj.name,
+                  type: obj.type,
+                  owner: obj.owner,
+                  details: response.data
+                }
+              } else {
+                return obj
+              }
+            })
+          }
+        } else {
+          return schema
+        }
+      })
+    },
+
+    async get_one_string (query) {
+      const path = `http://localhost:5000/api/query`
       const axiosWithCookies = axios.create({
         withCredentials: true
       })
-      axiosWithCookies.post(path, name)
-        .then(response => {
-          this.describe_object_output = response.data
-        })
-        .catch(error => {
-          console.log(error)
-          this.describe_object_output = error.toString()
-        })
-    }
+      let response = await axiosWithCookies.post(path, {query: query})
+      return response.data[0].data[0][0]
+    },
 
+    async get_search_path () {
+      let sp = await this.get_one_string('show search_path')
+      return sp.split(', ').map(el => {
+        if (el === '"$user"') return this.current_user
+        return el
+      })
+    }
   }
 }
 </script>

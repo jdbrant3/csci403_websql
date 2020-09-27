@@ -204,38 +204,36 @@ def execute_query(cursor):
 
 
 # Implements \d
-@app.route('/api/describe', methods=['GET'])
+@app.route('/api/describe', methods=['POST'])
 @use_cursor_wrapper
 def describe(cursor):
-    results = []
-
-    for result in pgspecial.execute(cursor, "\d"):
+    query = '\d'
+    extra = request.json['show_extra']
+    if extra:
+        query = '\d+'
+    for result in pgspecial.execute(cursor, query):
         header = result[2]
     data = cursor.fetchall()
-
-    results.append({ 'data': data, 'columns': header })
-
-    cursor.close()
-    cursor.connection.close()
-    return json.dumps(results)
+    answer = { 'data': data, 'columns': header }
+    return json.dumps(answer)
 
 
 # Implements \d object or \d+ object
 @app.route('/api/describe_object', methods=['POST'])
 @use_cursor_wrapper
 def describe_object(cursor):
-    results = []
-
-    for result in pgspecial.execute(cursor, "\dt"):
-        header = result[2]
-    data = cursor.fetchall()
-
-    results.append({ 'data': data, 'columns': header })
-
-    cursor.close()
-    cursor.connection.close()
-
-    return json.dumps(results)
+    query = '\d'
+    extra = request.json['show_extra']
+    if extra:
+        query = '\d+'
+    name = request.json['name']
+    query = query + ' ' + name
+    result = pgspecial.execute(cursor, query)[0]
+    data = result[1]
+    header = result[2]
+    info = result[3]
+    answer = { 'data': data, 'columns': header, 'info': info }
+    return json.dumps(answer)
 
 
 # route for user login

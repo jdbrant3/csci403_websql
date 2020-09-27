@@ -106,7 +106,7 @@ export default {
 
     async get_search_path () {
       let sp = await this.get_one_string('show search_path')
-      return sp.split(',').map(el => {
+      return sp.split(', ').map(el => {
         if (el === '"$user"') return this.current_user
         return el
       })
