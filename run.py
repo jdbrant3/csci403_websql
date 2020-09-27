@@ -17,7 +17,7 @@ app = Flask(__name__,
             template_folder = "../dist")
 
 # Define origins of api requests to enable Cross Origin Request Sharing for session object across api requests
-cors = CORS(app, resources={r"/api/*": {'origins': ['http://localhost:8080', 'http://127.0,0,1:8000']}}, headers=['Content-Type'], expose_headers=['Access-Control-Allow-Origin'], supports_credentials=True)
+cors = CORS(app, resources={r"/api/*": {'origins': ['http://localhost:8080']}}, headers=['Content-Type'], expose_headers=['Access-Control-Allow-Origin'], supports_credentials=True)
 
 # Load app and database settings from config file
 config(app)

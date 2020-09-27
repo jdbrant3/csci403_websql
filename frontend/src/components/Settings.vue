@@ -70,6 +70,7 @@ export default {
   }),
 
   mounted () {
+    this.baseurl = process.env.VUE_APP_API_BASE + '/api'
     this.get_user()
       .then(response => {
         this.current_user = response
@@ -92,7 +93,7 @@ export default {
 
   methods: {
     async get_one_string (query) {
-      const path = `http://localhost:5000/api/query`
+      const path = this.baseurl + '/query'
       const axiosWithCookies = axios.create({
         withCredentials: true
       })
@@ -113,7 +114,7 @@ export default {
     },
 
     start_editing_search_path () {
-      const path = `http://localhost:5000/api/query`
+      const path = this.baseurl + '/query'
       const axiosWithCookies = axios.create({
         withCredentials: true
       })
@@ -133,7 +134,7 @@ export default {
     },
 
     save_search_path () {
-      const path = `http://localhost:5000/api/query`
+      const path = this.baseurl + '/query'
       let query = 'alter user current_user set search_path to ' + this.current_search_path.join(', ')
       const axiosWithCookies = axios.create({
         withCredentials: true

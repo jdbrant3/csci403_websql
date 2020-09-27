@@ -112,9 +112,14 @@ export default {
     showMessage: false
   }),
 
+  mounted () {
+    this.baseurl = process.env.VUE_APP_API_BASE + '/api';
+    console.log(this.baseurl)
+  },
+
   methods: {
     validate () {
-      const path = `http://localhost:5000/api/login`
+      const path = this.baseurl + '/login'
       const axiosWithCookies = axios.create({
         withCredentials: true
       })

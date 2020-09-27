@@ -61,8 +61,12 @@ export default {
     loggedIn: false
   }),
 
+  mounted () {
+    this.baseurl = process.env.VUE_APP_API_BASE + '/api'
+  },
+
   updated () {
-    const path = `http://localhost:5000/api/is_logged_in`
+    const path = this.baseurl + '/is_logged_in'
     const axiosWithCookies = axios.create({
       withCredentials: true
     })
@@ -73,7 +77,7 @@ export default {
   },
   methods: {
     logout () {
-      const path = `http://localhost:5000/api/logout`
+      const path = this.baseurl + '/logout'
       const axiosWithCookies = axios.create({
         withCredentials: true
       })

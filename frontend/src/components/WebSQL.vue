@@ -176,6 +176,8 @@ export default {
   }),
 
   mounted() {
+    this.baseurl = process.env.VUE_APP_API_BASE + '/api';
+
     if (sessionStorage.getItem('csci403_query')) {
       this.query = sessionStorage.getItem('csci403_query')
     }
@@ -197,7 +199,7 @@ export default {
 
   methods: {
     execute_sql_backend: async function () {
-      const path = `http://localhost:5000/api/query`
+      const path = this.baseurl + '/query'
       const axiosWithCookies = axios.create({
           withCredentials: true
       })
@@ -252,7 +254,7 @@ export default {
 
     async refresh_schemas () {
       let search_path = await this.get_search_path()
-      const path = `http://localhost:5000/api/describe`
+      const path = this.baseurl + '/describe'
       const axiosWithCookies = axios.create({ withCredentials: true })
       let response = await axiosWithCookies.post(path, { show_extra: false })
       for (let i = 0; i < search_path.length; i++) {
@@ -273,7 +275,7 @@ export default {
     },
 
     async get_object_info (schema_name, object_name, object_type) {
-      const path = `http://localhost:5000/api/describe_object`
+      const path = this.baseurl + '/describe_object'
       const axiosWithCookies = axios.create({ withCredentials: true })
       let response = await axiosWithCookies.post(
         path, { name: schema_name + '.' + object_name, show_extra: object_type === 'view' }
@@ -302,7 +304,7 @@ export default {
     },
 
     async get_one_string (query) {
-      const path = `http://localhost:5000/api/query`
+      const path = this.baseurl + '/query'
       const axiosWithCookies = axios.create({
         withCredentials: true
       })
